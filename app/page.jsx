@@ -1,45 +1,20 @@
-export default function Header() 
-{
-    return (
-<>
- <div id="header" >
-        <table id="header" border="0" width="100%" cellPadding="0" cellSpacing="0" bgcolor="06352a">
-        <tr>
-            <td>
-                <table border="0" width="100%" cellPadding="20" cellSpacing="20">
+import Link from "next/link"
 
-                    <td align="left">
-
-                        <font face="arial" color="#ffffff" size="6">
-                        ExpenseTracker
-                        </font>
-                    </td>
-                    <td>
-                        <a href="">
-                            <font face="arial" color="#ffffff" size="4">What We do</font>
-                        </a>
-                    </td>
-                    <td>
-                        <a href="">
-                            <font face="arial" color="#ffffff" size="4">About Us</font>
-                        </a>
-                    </td>
-                    <td>
-                        <a href="">
-                            <font face=" arial" color="#ffffff" size="4">Login</font>
-                        </a>
-                    </td>
-                </table>
-            </td>
-
-        </tr>
-
-
-    </table>
-    
- </div>
-
-
-</>
-    )
+export default function Header() {
+  return (
+    <header style={{ background: '#06352a', padding: '20px 0' }}>
+      <nav style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: 1200, margin: '0 auto' }}>
+       <Link href = "/">
+        <div style={{ color: '#fff', fontFamily: 'arial', fontSize: 32, fontWeight: 'bold' }}>
+        ExpenseTracker
+        </div>
+         </Link>
+        <div style={{ display: 'flex', gap: 32 }}>
+          <Link href="#" style={{ color: '#fff', fontFamily: 'arial', fontSize: 20, textDecoration: 'none' }}>What We do</Link>
+          <Link href="#" style={{ color: '#fff', fontFamily: 'arial', fontSize: 20, textDecoration: 'none' }}>About Us</Link>
+          <Link href="/login" style={{ color: '#fff', fontFamily: 'arial', fontSize: 20, textDecoration: 'none' }}>Login/SignUp</Link>
+        </div>
+      </nav>
+    </header>
+  );
 }

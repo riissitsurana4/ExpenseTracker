@@ -1,76 +1,22 @@
-"use client";
-import React, { useState } from 'react';
-import './login.css';
 
 export default function Login() {
-  const [isSignup, setIsSignup] = useState(false);
-  const [form, setForm] = useState({ email: '', password: '', name: '' });
+return(
+  <div className ="min-h-screen bg-gradiant-to-br from-teal-50 to-indigo-50 flex flex-col justify-center items-center p-6">
+    <div className ="w-full max-w-md">
+      <div className ="text-center mb-8">
+        <h1 className = "text-3xl font-bold text-gray-900 mb-2">ExpenseTracker </h1>
+        <p className = "text-gray-600">Track your expenses, stay on budget</p>
+      </div>
+     
+     <LoginForm />
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+      <div className = "mt-8 text-center text-sm text-gray-600">
+        <p>
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle login or signup logic here
-    if (isSignup) {
-      // Signup logic
-      alert(`Sign up: ${form.name}, ${form.email}`);
-    } else {
-      // Login logic
-      alert(`Login: ${form.email}`);
-    }
-  };
-
-  return (
-    <div className="login-container">
-      <div className="login-title">{isSignup ? 'Sign Up' : 'Login'}</div>
-      <form className="login-form" onSubmit={handleSubmit}>
-        {isSignup && (
-          <input
-            className="login-input"
-            type="text"
-            name="name"
-            placeholder="Name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
-        )}
-        <input
-          className="login-input"
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          required
-        />
-        <input
-          className="login-input"
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
-        <button className="login-button" type="submit">
-          {isSignup ? 'Sign Up' : 'Login'}
-        </button>
-      </form>
-      <a
-        href="#"
-        className="login-link"
-        onClick={() => setIsSignup((prev) => !prev)}
-      >
-        {isSignup
-          ? 'Already have an account? Login'
-          : "Don't have an account? Sign Up"}
-      </a>
+        </p>
+      </div>
     </div>
-  );
+  </div>
+) 
 }
-
-
 
