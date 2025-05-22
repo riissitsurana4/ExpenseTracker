@@ -1,19 +1,17 @@
-<html>
-   <body>
-
-   
-<title>ExpenseTracker</title>
-
+export default function Header() 
+{
+    return (
+<>
  <div id="header" >
-        <table id="header" border="0" width="100%" cellpadding="0" cellspacing="0" bgcolor="06352a">
+        <table id="header" border="0" width="100%" cellPadding="0" cellSpacing="0" bgcolor="06352a">
         <tr>
             <td>
-                <table border="0" width="100%" cellpadding="20" cellspacing="20">
+                <table border="0" width="100%" cellPadding="20" cellSpacing="20">
 
                     <td align="left">
 
                         <font face="arial" color="#ffffff" size="6">
-                        KhataTracker
+                        ExpenseTracker
                         </font>
                     </td>
                     <td>
@@ -42,6 +40,6 @@
  </div>
 
 
-</body>
-
-</html>
+</>
+    )
+}
