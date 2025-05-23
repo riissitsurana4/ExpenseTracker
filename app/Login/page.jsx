@@ -8,7 +8,7 @@ return(
         <p className = "text-gray-600">Track your expenses, stay on budget</p>
       </div>
      
-     <LoginForm />
+     
 
       <div className = "mt-8 text-center text-sm text-gray-600">
         <p>
