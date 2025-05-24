@@ -1,0 +1,201 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.header {
+  background-color: #0f766e;
+  padding: 20px 0;
+}
+
+.nav {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.name {
+  color: white;
+  font-size: 32px;
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 18px;
+}
+
+.hero-section {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #0f766e, #312e81);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100px 20px;
+}
+
+.hero-content {
+  text-align: center;
+  max-width: 768px;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: bold;
+  color: #111827;
+}
+
+.highlight {
+  color: #0f766e;
+}
+
+.hero-description {
+  margin-top: 24px;
+  font-size: 20px;
+  color: #ffffff;
+}
+
+.hero-button-container {
+  margin-top: 40px;
+}
+
+.hero-button {
+  background-color: #0f766e;
+  color: white;
+  padding: 12px 32px;
+  font-size: 18px;
+  font-weight: 500;
+  border-radius: 8px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+.hero-button:hover {
+  background-color: #0e645e;
+}
+
+.hero-icon {
+  margin-left: 8px;
+}
+
+/* Feature Card (Optional if used) */
+.feature-card {
+  background-color: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  background-color: #ccfbf1;
+  color: #0f766e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.feature-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.feature-description {
+  color: #4b5563;
+}
+
+/* Features Section */
+.features-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 96px 16px;
+}
+
+.features-heading {
+  font-size: 32px;
+  font-weight: bold;
+  color: #111827;
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+
+@media (min-width: 768px) {
+  .features-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .features-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* CTA Section */
+.cta-section {
+  background-color: #0f766e;
+  padding: 96px 16px;
+}
+
+.cta-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cta-heading {
+  font-size: 32px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 24px;
+}
+
+.cta-text {
+  color: #ccfbf1;
+  font-size: 18px;
+  margin-bottom: 32px;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cta-button {
+  background-color: white;
+  color: #0f766e;
+  padding: 12px 32px;
+  font-size: 18px;
+  font-weight: 500;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.cta-button:hover {
+  background-color: #f0fdfa;
+}

@@ -1,50 +1,92 @@
 import Link from "next/link";
 import { PieChart, DollarSign, Bell, Shield, Wallet, BarChart3 } from "lucide-react";
+import "./homepage.css"; // fixed casing to match actual file
 
 const FeatureCard = ({ icon, title, description }) => (
-  <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-    <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600 mb-4">
-      {icon}
-    </div>
-    <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-    <p className="text-gray-600">{description}</p>
+  <div className="feature-card">
+    <div className="feature-icon">{icon}</div>
+    <h3 className="feature-title">{title}</h3>
+    <p className="feature-description">{description}</p>
   </div>
 );
 
 export default function HomePage() {
   return (
     <main>
-      <header className="bg-teal-900 py-5">
-        <nav className="w-full flex items-center justify-between max-w-[1200px] mx-auto">
-          <Link href="/">
-            <div className="text-white font-bold text-3xl md:text-4xl" style={{ fontFamily: 'arial' }}>
-              ExpenseTracker
-            </div>
-          </Link>
-          <div className="flex gap-8">
-            <Link href="/what-we-do" className="text-white text-lg" style={{ fontFamily: 'arial', textDecoration: 'none' }}>What We do</Link>
-            <Link href="/about-us" className="text-white text-lg" style={{ fontFamily: 'arial', textDecoration: 'none' }}>About Us</Link>
-            <Link href="/login" className="text-white text-lg" style={{ fontFamily: 'arial', textDecoration: 'none' }}>Login</Link>
+      <header className="header">
+        <nav className="nav">
+            <div className="name">ExpenseTracker</div>
+          <div className="nav-links">
+            <Link href="/what-we-do" className="nav-link">What We Do</Link>
+            <Link href="/about-us" className="nav-link">About Us</Link>
+            <Link href="/login" className="nav-link">Login</Link>
           </div>
         </nav>
       </header>
-      <div className="min-h-screen bg-red-500">
-        {/* Hero Section */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl">
-            Take Control of Your <span className="text-teal-600">Finances</span>
+        {/* hero section */}
+
+      <div className="hero-section">
+        <div className="hero-content">
+          <h1 className="hero-title">
+            Take Control of Your <span className="highlight">Finances</span>
           </h1>
-          <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="hero-description">
             Track expenses, create budgets, and gain insights into your spending habits with our tracking solution.
           </p>
-          <div className="mt-10">
-            <Link href="/login" className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition-colors inline-flex items-center">
+          <div className="hero-button-container">
+            <Link href="/login" className="hero-button">
               Start Tracking
-              <DollarSign className="ml-2" size={20} />
+              <DollarSign className="hero-icon" size={20} />
             </Link>
           </div>
         </div>
       </div>
+
+        {/* features section */}
+        <div className="features-section">
+            <h2 className="features-heading">Everything you need to manage expenses</h2>
+            <div className = "features-grid">
+                <FeatureCard
+                    icon={<DollarSign size={24} />}
+                    title="Expense Tracking"
+                    description="Easily record and categorize your daily expenses." 
+                />
+                <FeatureCard
+                    icon={<Bell size={24} />}
+                    title="Budget Alerts"
+                    description="Set budget limits and receive alerts when you approach them."
+                />
+                <FeatureCard
+                    icon={<BarChart3 size={24} />}
+                    title="Spending Analysis"
+                    description="Get insights into your spending habits with reports."
+                />
+                <FeatureCard
+                    icon={<Shield size={24} />}
+                    title="Secure & Private"
+                    description="Your data is encrypted and stored securely."
+                />
+            </div>
+        </div>
+        {/* cta-section */}
+        <div className="cta-section">
+            <div className="cta-content">
+            <h2 className="cta-heading">Ready to take control of your finances?</h2>
+            <p className="cta-text">Join thousands of users who trust us to manage their expenses.</p>
+            <Link href="/signup" className="cta-button">
+                Create Free Account
+                <Wallet className="cta-icon" size={20} />
+            </Link>
+        </div>
+        </div>
+        {/* footer 
+        <footer className="footer">
+            <p className= "footer-text">
+            </p>
+        
+        </footer>
+        */}
+
     </main>
   );
 }

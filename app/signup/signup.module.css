@@ -1,0 +1,170 @@
+.formContainer{
+    width: 100%;
+    max-width: 400px;
+}
+
+.form{
+    background-color: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+.container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #e0f2f1, #e0e7ff);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.wrapper {
+  width: 100%;
+  max-width: 400px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 1.875rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #4b5563;
+}
+
+.footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+.heading{
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1.5rem;
+}
+
+.error{
+ margin-bottom: 1rem;
+ padding: 0.75rem;
+ background-color: #fef2f2;
+ border: 1px solid #fecaca;
+ color: #b91c1c;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.label{
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    color: #374151;
+    font-weight: 500;
+}
+
+.input{
+    width: 90%;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+   transition: all 0.2s ease;
+    margin-bottom: 1rem; /* Add space between input and button */
+}
+
+.input:focus {
+  outline: none;
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 2px #99f6e4;
+}
+
+.relative {
+  position: relative;
+}
+
+.toggleButton{
+    position: absolute;
+    top: 40%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #6b7280;
+}
+
+.toggleButton:hover {
+    color: #374151;
+}
+
+.button{
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: #0d9488;
+    color: white;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+    border: none  ;
+    font-size: 1rem;
+    cursor: pointer;
+
+}
+
+.button:hover{
+    background-color: #0f766e;
+}
+
+.footerLinks {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.footerLinks a {
+  color: #0d9488;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footerLinks a:hover {
+  color: #115e59;
+}
+
+.linkSpacer {
+  margin: 0 0.5rem;
+}
+
+
+.success-message {
+    background-color: #d1fae5;
+    color: #065f46;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.switch-auth{
+    text-align: center;
+    margin-top: 1rem;
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+
+.switch-auth a {
+    color: #14b8a6;
+    text-decoration: none;
+}
+
+.switch-auth a:hover {
+    text-decoration: underline;
+}
