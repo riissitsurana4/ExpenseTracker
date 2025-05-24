@@ -37,7 +37,7 @@ const LoginForm = () => {
         setError(signInError.message);
       } else {
         setError('');
-        router.push('/private');
+        router.push('/dashboard'); // Redirect to /dashboard after successful login
       }
     } catch (err) {
       setError('Unexpected error occurred');

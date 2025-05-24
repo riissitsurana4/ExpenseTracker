@@ -1,0 +1,154 @@
+/* Reset and base styles */
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background-color: white;
+  color: #222;
+}
+
+/* Layout wrapper */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: white;
+}
+
+/* Sidebar styles */
+.sidebar {
+  background-color: white;
+  color: #008080; /* teal */
+  width: 220px;
+  padding: 1.5rem 1rem;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  border-right: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h2 {
+  margin-bottom: 2rem;
+  color: #008080;
+}
+
+.sidebar nav {
+  flex-grow: 1;
+}
+
+.sidebar nav a {
+  display: block;
+  color: #008080;
+  text-decoration: none;
+  margin: 1rem 0;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.sidebar nav a:hover {
+  text-decoration: underline;
+  color: #006666;
+}
+
+/* Logout button */
+.logout-button {
+  margin-top: auto;
+  background-color: white;
+  color: #008080;
+  padding: 10px;
+  border: 2px solid #008080;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  width: calc(100% - 2rem);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.logout-button:hover {
+  background-color: #008080;
+  color: white;
+}
+
+/* Main content area */
+main {
+  margin-left: 220px;
+  padding: 2rem;
+  flex: 1;
+  background-color: white;
+  color: #008080;
+}
+
+/* Dashboard content styles */
+.dashboard-content {
+  max-width: 800px;
+  margin: 0 auto;
+  color: #008080;
+}
+
+.summary {
+  margin-bottom: 20px;
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.expense-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.expense-form input {
+  flex: 1 1 150px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.expense-form button {
+  padding: 8px 12px;
+  background-color: #008080;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.expense-form button:hover {
+  background-color: #006666;
+}
+
+.expense-list {
+  margin-top: 20px;
+}
+
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #e8e8e8;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.expense-item button {
+  background-color: #008080;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.expense-item button:hover {
+  background-color: #006666;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: #008080;
+}
