@@ -1,0 +1,55 @@
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 253px;
+  right: 0;
+  height: 60px;
+  background-color: white ;
+  color: #008080;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  z-index: 999;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.profile {
+  position: relative;
+}
+
+.profile-btn {
+  background: none;
+  border: none;
+  color: #008080;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 5px;
+  background: white;
+  color: #004d4d;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 1000;
+}
+
+.dropdown button {
+  background: #ff6666;
+  color: white;
+  border: none;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+}

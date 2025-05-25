@@ -16,6 +16,13 @@ body {
   align-items: center;
 }
 
+.button {
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+  text-decoration: none;
+  align-items: center;
+}
 .name {
   color: white;
   font-size: 32px;

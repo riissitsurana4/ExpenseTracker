@@ -17,9 +17,10 @@ export default function HomePage() {
         <nav className="nav">
             <div className="name">ExpenseTracker</div>
           <div className="nav-links">
-            <Link href="/what-we-do" className="nav-link">What We Do</Link>
-            <Link href="/about-us" className="nav-link">About Us</Link>
             <Link href="/login" className="nav-link">Login</Link>
+            <Link href="/signup" className="button">
+              Get Started
+            </Link>
           </div>
         </nav>
       </header>
@@ -34,7 +35,7 @@ export default function HomePage() {
             Track expenses, create budgets, and gain insights into your spending habits with our tracking solution.
           </p>
           <div className="hero-button-container">
-            <Link href="/login" className="hero-button">
+            <Link href="/signup" className="hero-button">
               Start Tracking
               <DollarSign className="hero-icon" size={20} />
             </Link>
