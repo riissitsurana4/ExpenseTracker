@@ -40,13 +40,13 @@ export async function updateSession(request) {
   if (
     !user &&
     request.nextUrl.pathname !== '/' && // allow unauthenticated access to home page
-    !request.nextUrl.pathname.startsWith('/login') &&
+    !request.nextUrl.pathname.startsWith('/loginpages') &&
      !request.nextUrl.pathname.startsWith('/signup') &&
     !request.nextUrl.pathname.startsWith('/auth')
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/loginpages'
     return NextResponse.redirect(url)
   }
 

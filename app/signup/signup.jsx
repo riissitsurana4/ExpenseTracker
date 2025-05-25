@@ -122,7 +122,7 @@ const Signup = () => {
 
         <div className={styles.footerLinks}>
           <p className="switch-auth">
-                    Already have an account? <Link href="/login">Sign in</Link>
+                    Already have an account? <Link href="/loginpages">Sign in</Link>
                 </p>
         </div>
       </form>

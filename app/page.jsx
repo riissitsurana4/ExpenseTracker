@@ -17,7 +17,7 @@ export default function HomePage() {
         <nav className="nav">
             <div className="name">ExpenseTracker</div>
           <div className="nav-links">
-            <Link href="/login" className="nav-link">Login</Link>
+            <Link href="/loginpages" className="nav-link">Login</Link>
             <Link href="/signup" className="button">
               Get Started
             </Link>

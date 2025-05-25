@@ -13,7 +13,7 @@ export default async function DashboardLayout({ children, modal }) {
   const user = data?.user;
 
   if (!user) {
-    redirect('/login');
+    redirect('/loginpages');
   }
 
   return (
