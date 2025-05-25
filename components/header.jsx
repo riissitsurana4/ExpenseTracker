@@ -2,7 +2,7 @@
 import {useEffect, useState} from 'react';
 import { supabase } from '../utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import './Header.css';
+import './header.css';
 
 export default function Header() {
   const [userEmail, setUserEmail] = useState('');
