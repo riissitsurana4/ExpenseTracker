@@ -1,11 +1,12 @@
 'use client';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import { useEffect, useState } from 'react';
-import './dashboard.css';
 import { supabase } from '../../utils/supabase/client'; 
 import {Chart, BarElement,ArcElement, CategoryScale, LinearScale, Tooltip, Legend} from 'chart.js';
 import {Bar, Pie} from 'react-chartjs-2';
 Chart.register(BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend);
-
+import '../../styles/custom-bootstrap.scss';
+import BootstrapClient from '../../components/BootstrapClient';
 
 export default function Dashboard() {
   const [expenses, setExpenses] = useState([]);
@@ -30,7 +31,6 @@ export default function Dashboard() {
     const { data, error } = await supabase.auth.getUser();
     const user = data?.user;
     if (!user) {
-      // handle user not found
       return;
     }
     const { data: expensesData, error: expensesError } = await supabase
@@ -154,27 +154,29 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="dashboard">
-      <div className="summary-cards">
-        <div className="card">
-          <h3>Today</h3>
-          <p>₹{totals.daily.toFixed(2)}</p>
+    <>
+    <BootstrapClient />
+    <div className="container-fluid">
+      <div className="row">
+        <div className="card col-sm-6 mb-3 mb-sm-0">
+          <h3 className = "card-title text-primary">Today's Expenses</h3>
+          <p className = "card-body text-primary">₹{totals.daily.toFixed(2)}</p>
         </div>
-        <div className="card">
-          <h3>This Month</h3>
-          <p>₹{totals.monthly.toFixed(2)}</p>
+        <div className="card col-sm-6">
+          <h3 className = "card-title text-primary">This Month's Expenses</h3>
+          <p className = "card-body text-primary">₹{totals.monthly.toFixed(2)}</p>
         </div>
-        <button onClick={() => openModal()} className="add-button">+ Add Expense</button>
+        
       </div>
 
-      <div className="expenses-section">
-        <h2>Recent Expenses</h2>
+      <div className="container-fluid">
+        <h2 className = "text-primary">Recent Expenses</h2>
         {expenses.length === 0 ? (
-          <p className="empty-msg">No expenses yet.</p>
+          <p className="text-primary">No expenses yet.</p>
         ) : (
           <div className="expense-list">
             {expenses.map((exp) => (
-              <div key={exp.id} className="expense-card">
+              <div key={exp.id} className="card col-sm-6 mb-3 mb-sm-0">
                 <div>
                   <strong>{exp.title}</strong>
                   <p className="expense-info">₹{parseFloat(exp.amount).toFixed(2)} • {exp.category}</p>
@@ -188,47 +190,7 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-      <div className="chart-section">
-        <div className="chart-box">
-          <h3>Spending Over Last 7 Days</h3>
-          <Bar
-            data={{
-              labels: dailyLabels,
-              datasets: [
-                {
-                  label: '₹',
-                  data: dailySpending,
-                  backgroundColor: '#4db8b8',
-                  borderRadius: 5,
-                },
-              ],
-            }}
-            options={{ responsive: true }}
-          />
-        </div>
-        <div className="chart-box small-chart">
-          <h3>Spending by Category</h3>
-          <Pie
-            data={{
-              labels: Object.keys(categoryData),
-              datasets: [
-                {
-                  data: Object.values(categoryData),
-                  backgroundColor: [
-                    '#008080',
-                    '#4db8b8',
-                    '#66cccc',
-                    '#99e6e6',
-                    '#b2f0f0',
-                    '#007070',
-                  ],
-                },
-              ],
-            }}
-          />
-        </div>
-      </div>
-
+     
       {showModal && (
         <div className="modal-overlay">
           <div className="modal">
@@ -268,5 +230,6 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+    </>
   );
 }

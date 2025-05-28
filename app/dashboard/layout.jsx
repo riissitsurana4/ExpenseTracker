@@ -1,9 +1,9 @@
-import './dashboard.css';
+import '../../styles/custom-bootstrap.scss';
 import Link from 'next/link';
 import {createClient} from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
-import LogoutButton from '../../components/loginbutton.jsx';
-import Header from '../../components/header.jsx';
+import BootstrapClient from '../../components/BootstrapClient';
+
 export default async function DashboardLayout({ children, modal }) {
   const supabase = await createClient();
   const {
@@ -18,20 +18,19 @@ export default async function DashboardLayout({ children, modal }) {
 
   return (
  <>
-      <Header />
-    <div className="dashboard-container">
-      <aside className="sidebar">
-        <h2>ExpenseTracker</h2>
-        <nav>
-          <Link href="/dashboard">Overview</Link>
-          <Link href="/dashboard/budget">Budget</Link>
-          <Link href="/dashboard/categories">Categories</Link>
-          <Link href="/dashboard/analysis">Spending Analysis</Link>
-          <Link href="/dashboard/settings">Settings</Link>
+      <BootstrapClient />
+    <div className = "sidebar-layout d-flex">
+      <aside className="sidebar bg-white">
+        <h2 className="mb-4 fw-bold text-primary">ExpenseTracker</h2>
+        <nav className="nav flex-column">
+          <Link href="/dashboard" className = "nav-link text-ternary">Overview</Link>
+          <Link href="/dashboard/budget"className = "nav-link text-ternary">Budget</Link>
+          <Link href="/dashboard/categories" className = "nav-link text-ternary">Categories</Link>
+          <Link href="/dashboard/analysis" className = "nav-link text-ternary" >Spending Analysis</Link>
+          <Link href="/dashboard/settings" className = "nav-link text-ternary" >Settings</Link>
         </nav>
-        <LogoutButton />
       </aside>
-      <main style={{ marginLeft: '220px', padding: '2rem', flex: 1 }}>
+      <main style={{ marginLeft: '0%', padding: '2rem', flex: 1 }}>
         {children}
         {modal}
       </main>
