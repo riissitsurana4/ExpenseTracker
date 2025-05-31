@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ['http://192.168.1.77:3000'],
+  reactStrictMode: true,
+  sassOptions: {
+    includePaths: ['styles'], // Adjust if needed
+  },
 };
 
 module.exports = nextConfig;
