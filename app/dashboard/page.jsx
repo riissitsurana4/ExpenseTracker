@@ -1,5 +1,4 @@
 'use client';
-import 'bootstrap/dist/css/bootstrap.min.css';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabase/client'; 
 import {Chart, BarElement,ArcElement, CategoryScale, LinearScale, Tooltip, Legend} from 'chart.js';
