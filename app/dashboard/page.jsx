@@ -25,7 +25,12 @@ export default function Dashboard() {
   useEffect(() => {
     fetchExpenses();
     fetchCategories();
-  }, []);
+    if (showModal) {
+    document.body.classList.add('modal-open');
+  } else {
+    document.body.classList.remove('modal-open');
+  }
+  }, [showModal]);
 
   const fetchExpenses = async () => {
     const { data, error } = await supabase.auth.getUser();
@@ -97,9 +102,15 @@ export default function Dashboard() {
 
   const openModal = (expense = null) => {
     setEditExpense(expense);
-    setTitle(expense?.title || '');
-    setAmount(expense?.amount || '');
-    setCategory(expense?.category || '');
+    if (expense) {
+      setTitle(expense.title || '');
+      setAmount(expense.amount || '');
+      setCategory(expense.category || '');
+    } else {
+      setTitle('');
+      setAmount('');
+      setCategory('');
+    }
     setShowModal(true);
   };
 
@@ -156,80 +167,173 @@ export default function Dashboard() {
   return (
     <>
     <BootstrapClient />
-    <div className="container-fluid">
+    <div className="container-fluid ">
       <div className="row">
-        <div className="card col-sm-6 mb-3 mb-sm-0">
-          <h3 className = "card-title text-primary">Today's Expenses</h3>
-          <p className = "card-body text-primary">₹{totals.daily.toFixed(2)}</p>
+        <div className="card col-sm-4 mb-3 mb-sm-0 border-0">
+          <h3 className="card-title text-primary">Today's Expenses</h3>
+          <p className="card-body text-primary">₹{totals.daily.toFixed(2)}</p>
         </div>
-        <div className="card col-sm-6">
-          <h3 className = "card-title text-primary">This Month's Expenses</h3>
-          <p className = "card-body text-primary">₹{totals.monthly.toFixed(2)}</p>
+        <div className="card col-sm-4 border-0">
+          <h3 className="card-title text-primary">This Month's Expenses</h3>
+          <p className="card-body text-primary">₹{totals.monthly.toFixed(2)}</p>
         </div>
-        
+        <div className="card col-sm-4 border-0">
+          <h3 className="card-title text-primary">FY-Expenses</h3>
+          <p className="card-body text-primary">₹</p>
+        </div>
       </div>
 
       <div className="container-fluid">
-        <h2 className = "text-primary">Recent Expenses</h2>
-        {expenses.length === 0 ? (
-          <p className="text-primary">No expenses yet.</p>
-        ) : (
-          <div className="expense-list">
-            {expenses.map((exp) => (
-              <div key={exp.id} className="card col-sm-6 mb-3 mb-sm-0">
-                <div>
-                  <strong>{exp.title}</strong>
-                  <p className="expense-info">₹{parseFloat(exp.amount).toFixed(2)} • {exp.category}</p>
-                </div>
-                <div className="expense-actions">
-                  <button className="edit" onClick={() => openModal(exp)}>Edit</button>
-                  <button className="delete" onClick={() => handleDelete(exp.id)}>Delete</button>
+        <h2 className="text-primary">Recent Expenses</h2>
+        <div className="row">
+          {expenses.length === 0 ? (
+            <div className="col-12">
+              <div className="alert alert-info text-center">No expenses yet.</div>
+            </div>
+          ) : (
+            expenses.map((exp) => (
+              <div key={exp.id} className="col-md-6 mb-3">
+                <div className="card h-100">
+                  <div className="card-body">
+                    <h5 className="card-title">{exp.title}</h5>
+                    <p className="card-text expense-info">
+                      ₹{parseFloat(exp.amount).toFixed(2)}
+                      <span className="badge bg-secondary ms-2">{exp.category}</span>
+                    </p>
+                    <div className="d-flex gap-2 mt-3">
+                      <button className="btn btn-outline-primary btn-sm" onClick={() => openModal(exp)}>Edit</button>
+                      <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(exp.id)}>Delete</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
-     
+
+      <div className="container-fluid">
+        <h2 className="text-primary">Add New Expense</h2>
+        <button className="btn btn-primary" onClick={() => openModal()}>Add Expense</button>
+      </div>
+
+      <div className="container-fluid">
+        <h2 className="text-primary">Expense Breakdown</h2>
+        <div className="row">
+          <div className="col-sm-6">
+            <Bar
+              data={{
+                labels: dailyLabels,
+                datasets: [
+                  {
+                    label: 'Daily Spending',
+                    data: dailySpending,
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'top',
+                  },
+                },
+              }}
+            />
+          </div>
+          <div className="col-sm-6">
+            <Pie
+              data={{
+                labels: Object.keys(categoryData),
+                datasets: [
+                  {
+                    label: 'Category Breakdown',
+                    data: Object.values(categoryData),
+                    backgroundColor: [
+                      'rgba(255, 99, 132, 0.6)',
+                      'rgba(54, 162, 235, 0.6)',
+                      'rgba(255, 206, 86, 0.6)',
+                      'rgba(75, 192, 192, 0.6)',
+                      'rgba(153, 102, 255, 0.6)',
+                      'rgba(255, 159, 64, 0.6)',
+                    ],
+                    borderColor: [
+                      'rgba(255, 99, 132, 1)',
+                      'rgba(54, 162, 235, 1)',
+                      'rgba(255, 206, 86, 1)',
+                      'rgba(75, 192, 192, 1)',
+                      'rgba(153, 102, 255, 1)',
+                      'rgba(255, 159, 64, 1)',
+                    ],
+                    borderWidth: 1,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'top',
+                  },
+                },
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>{editExpense ? 'Edit Expense' : 'Add Expense'}</h3>
-            <form onSubmit={handleSubmit}>
-              <input
-                type="text"
-                placeholder="Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-              <input
-                type="number"
-                placeholder="Amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-              />
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                required
-                className = "category-select"
-              >
-                <option value="">Select Category</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.name}>{category.name}</option>
-                ))}
-              </select>
-              <div className="modal-actions">
-                <button type="submit">{editExpense ? 'Update' : 'Add'}</button>
-                <button type="button" onClick={closeModal} className="cancel">Cancel</button>
+        <div className="modal fade show d-block" tabIndex="-1" >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3 className="modal-title" id="addExpenseModalLabel">{editExpense ? 'Edit Expense' : 'Add Expense'}</h3>
+                <button type="button" className="btn-close" onClick={closeModal} aria-label="Close"></button>
               </div>
-            </form>
+              <div className="modal-body">
+                <form onSubmit={handleSubmit}>
+                  <input
+                    type="text"
+                    placeholder="Title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    className="form-control mb-2"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Amount"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                    className="form-control mb-2"
+                  />  
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    required
+                    className="form-select mb-2 category-select"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(category => (
+                      <option key={category.id} value={category.name}>{category.name}</option>
+                    ))}
+                  </select>
+                  <div className="modal-actions d-flex justify-content-between">
+                    <button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
+                    <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       )}
     </div>
+      
     </>
   );
 }
