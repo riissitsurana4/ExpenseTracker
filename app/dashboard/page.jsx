@@ -64,6 +64,9 @@ export default function Dashboard() {
   const calculateTotals = (expensesData) => {
     const today = new Date().toISOString().slice(0, 10);
     const thisMonth = new Date().toISOString().slice(0, 7);
+    const now = new Date();
+    const cyStart = new Date(now.getFullYear(), 0, 1); // Jan 1st
+    const cyEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999); // Dec 31st
     const result = expensesData.reduce(
       (acc, curr) => {
         const date = curr.created_at.slice(0, 10);
@@ -71,9 +74,13 @@ export default function Dashboard() {
         const amt = parseFloat(curr.amount);
         if (date === today) acc.daily += amt;
         if (month === thisMonth) acc.monthly += amt;
+        const expDate = new Date(curr.created_at);
+        if (expDate >= cyStart && expDate <= cyEnd) {
+          acc.cy += amt;
+        }
         return acc;
       },
-      { daily: 0, monthly: 0 }
+      { daily: 0, monthly: 0, cy: 0 }
     );
     setTotals(result);
 
@@ -168,7 +175,7 @@ export default function Dashboard() {
     <BootstrapClient />
     <div className="container-fluid ">
       <div className="row">
-        <div className="card col-sm-4 mb-3 mb-sm-0 border-0">
+        <div className="card col-sm-3 mb-3 mb-sm-0 border-0">
           <h3 className="card-title text-primary">Today's Expenses</h3>
           <p className="card-body text-primary">₹{totals.daily.toFixed(2)}</p>
         </div>
@@ -176,10 +183,14 @@ export default function Dashboard() {
           <h3 className="card-title text-primary">This Month's Expenses</h3>
           <p className="card-body text-primary">₹{totals.monthly.toFixed(2)}</p>
         </div>
-        <div className="card col-sm-4 border-0">
-          <h3 className="card-title text-primary">FY-Expenses</h3>
-          <p className="card-body text-primary">₹</p>
+        <div className="card col-sm-2 border-0">
+          <h3 className="card-title text-primary">CY-Expenses</h3>
+          <p className="card-body text-primary">₹{totals.cy?.toFixed(2) ?? 0}</p>
         </div>
+        <div className="card col-sm-3 border-0">
+        <h2 className="text-primary">Add New Expense</h2>
+        <button className="btn btn-primary" onClick={() => openModal()}>Add Expense</button>
+      </div>
       </div>
 
       <div className="container-fluid">
@@ -211,10 +222,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="container-fluid">
-        <h2 className="text-primary">Add New Expense</h2>
-        <button className="btn btn-primary" onClick={() => openModal()}>Add Expense</button>
-      </div>
+      
 
       <div className="container-fluid">
         <h2 className="text-primary">Expense Breakdown</h2>
