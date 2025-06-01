@@ -201,7 +201,6 @@ export default function BudgetPage() {
         </div>
         <div className="row">
           <div className="col-sm-6 mb-4">
-            {/* Monthly Budget Form (Set/Update) */}
             {!budget ? (
               <form onSubmit={handleSave} className="budget-form">
                 <div className="mb-3">
@@ -249,7 +248,6 @@ export default function BudgetPage() {
             )}
           </div>
           <div className="col-sm-6 mb-4">
-            {/* Yearly Budget Form (Set/Update) */}
             {!yearlyBudget ? (
               <form onSubmit={handleYearlySave} className="budget-form">
                 <div className="mb-3">
@@ -297,7 +295,7 @@ export default function BudgetPage() {
             )}
           </div>
         </div>
-        </div>
+      </div>
     </>
   );
 }

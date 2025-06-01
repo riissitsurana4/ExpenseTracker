@@ -8,51 +8,51 @@ import Link from 'next/link';
 
 
 const Signup = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState(''); 
-    const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setSuccess('');
-        setLoading(true);
-        if (!email || !password || !confirmPassword) {
-            setError('Please fill in all fields');
-            setLoading(false);
-            return;
-        }
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
-            setLoading(false);
-            return;
-        }
-        try {
-            const { error: signUpError } = await supabase.auth.signUp({
-                email,
-                password,
-            });
-            if (signUpError) {
-                setError(signUpError.message);
-            } else {
-                setSuccess('Account created successfully! Please check your email for confirmation.');
-                setEmail('');
-                setPassword('');
-                setConfirmPassword('');
-            }
-        } catch {
-            setError('Failed to create Account.');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    if (!email || !password || !confirmPassword) {
+      setError('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (signUpError) {
+        setError(signUpError.message);
+      } else {
+        setSuccess('Account created successfully! Please check your email for confirmation.');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+      }
+    } catch {
+      setError('Failed to create Account.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className={styles.formContainer}>
+  return (
+    <div className={styles.formContainer}>
       <form onSubmit={handleSubmit} className={styles.form}>
         <h2 className={styles.heading}>Sign UP</h2>
         {error && <div className={styles.error}>{error}</div>}
@@ -97,7 +97,7 @@ const Signup = () => {
               id="password"
               type={showPassword ? 'text' : 'password'}
               value={confirmPassword}
-               onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               className={styles.input}
               placeholder="••••••••"
               autoComplete="new-password"
@@ -114,7 +114,7 @@ const Signup = () => {
 
         <div>
           <button type="submit" className={styles.button} disabled={loading}>
-             <UserPlus size={16} style={{ marginRight: '8px' }} />
+            <UserPlus size={16} style={{ marginRight: '8px' }} />
             {loading ? 'creating...' : 'Create Account'}
 
           </button>
@@ -122,12 +122,12 @@ const Signup = () => {
 
         <div className={styles.footerLinks}>
           <p className="switch-auth">
-                    Already have an account? <Link href="/loginpages">Sign in</Link>
-                </p>
+            Already have an account? <Link href="/loginpages">Sign in</Link>
+          </p>
         </div>
       </form>
     </div>
-    );
+  );
 };
 
 export default Signup;

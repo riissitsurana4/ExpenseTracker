@@ -165,13 +165,6 @@ export default function CategoriesPage() {
                     </div>
                     <div className="col-md-6 card border-0">
                         <h3 className="text-secondary">Add Subcategory</h3>
-                        <input
-                            type="text"
-                            className="form-control mb-2"
-                            placeholder="New Subcategory Name"
-                            value={newSubcategoryName}
-                            onChange={(e) => setNewSubcategoryName(e.target.value)}
-                        />
                         <select
                             className="form-select mb-2"
                             value={newSubcategoryParentId ?? ''}
@@ -184,11 +177,70 @@ export default function CategoriesPage() {
                                 </option>
                             ))}
                         </select>
+                        <input
+                            type="text"
+                            className="form-control mb-2"
+                            placeholder="New Subcategory Name"
+                            value={newSubcategoryName}
+                            onChange={(e) => setNewSubcategoryName(e.target.value)}
+                        />
+
                         <button className="btn btn-primary" onClick={addSubcategory}>Add Subcategory</button>
 
                     </div>
                 </div>
-
+                <div className="row">
+                    {categories.map((category) => (
+                        <div key={category.id} className="col-md-4 mb-4">
+                            <div className="card border-0">
+                                <div className="card-body">
+                                    {editingCategoryId === category.id ? (
+                                        <>
+                                            <input
+                                                type="text"
+                                                className="form-control mb-2"
+                                                value={category.name}
+                                                onChange={(e) => updateCategory(category.id, e.target.value)}
+                                            />
+                                            <button className="btn btn-success" onClick={() => updateCategory(category.id, category.name)}>Save</button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h5 className="card-title text-primary">{category.name}</h5>
+                                            <button className="btn btn-secondary me-2" onClick={() => setEditingCategoryId(category.id)}>Edit</button>
+                                            <button className="btn btn-danger" onClick={() => deleteCategory(category.id)}>Delete</button>
+                                        </>
+                                    )}
+                                    <ul className="list-group mt-3">
+                                        {(category.subcategories ?? []).map((subcategory) => (
+                                            <li key={subcategory.id} className="list-group-item d-flex justify-content-between align-items-center">
+                                                {editingSubcategoryId === subcategory.id ? (
+                                                    <>
+                                                        <input
+                                                            type="text"
+                                                            className="form-control mb-2"
+                                                            value={subcategory.name}
+                                                            onChange={(e) => updateSubcategory(subcategory.id, e.target.value)}
+                                                        />
+                                                        <button className="btn btn-success" onClick={() => updateSubcategory(subcategory.id, subcategory.name)}>Save</button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {subcategory.name}
+                                                        <div>
+                                                            <button className="btn btn-secondary me-2" onClick={() => setEditingSubcategoryId(subcategory.id)}>Edit</button>
+                                                            <button className="btn btn-danger" onClick={() => deleteSubcategory(subcategory.id)}>Delete</button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </>
     );
