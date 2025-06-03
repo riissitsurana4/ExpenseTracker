@@ -98,7 +98,7 @@ export default function CategoriesPage() {
     }
 
     async function updateSubcategory(id, newName) {
-        if (!newName.trim()) return;
+        if (!newName.trim()) return;n
         const { error } = await supabase
             .from('subcategories')
             .update({ name: newName.trim() })

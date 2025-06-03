@@ -7,6 +7,7 @@ Chart.register(BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Lege
 import '../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../components/BootstrapClient';
 import { presetcategories } from '../../components/presets.jsx'
+import { AreaChartIcon } from 'lucide-react';
 
 export default function Dashboard() {
 	const [expenses, setExpenses] = useState([]);
@@ -15,12 +16,13 @@ export default function Dashboard() {
 	const [title, setTitle] = useState('');
 	const [amount, setAmount] = useState('');
 	const [category, setCategory] = useState('');
+	const [subcategory, setSubcategory] = useState("");
 	const [totals, setTotals] = useState({ daily: 0, monthly: 0 });
 	const [categoryData, setCategoryData] = useState({});
 	const [dailyLabels, setDailyLabels] = useState([]);
 	const [dailySpending, setDailySpending] = useState([]);
 	const [categories, setCategories] = useState([]);
-
+	const [subcategories, setSubcategories] = useState([]);
 
 	useEffect(() => {
 		fetchExpenses();
@@ -83,7 +85,7 @@ export default function Dashboard() {
 							{ onConflict: ['category_id', 'name'], ignoreDuplicates: true }
 						);
 
-				
+
 				}
 			}
 
@@ -125,6 +127,25 @@ export default function Dashboard() {
 			.order('name', { ascending: true });
 		setCategories(categoryData || []);
 	};
+	useEffect(() => {
+		if (category) {
+			const selectedCategory = categories.find(cat => cat.name === category);
+			if (selectedCategory) {
+				const fetchSubcategories = async (categoryId) => {
+					const { data } = await supabase
+						.from('subcategories')
+						.select('name')
+						.eq('category_id', categoryId);
+					setSubcategories(data || []);
+					setSubcategory("");
+				};
+				fetchSubcategories(selectedCategory.id);
+			}
+		} else {
+			setSubcategories([]);
+			setSubcategory("");
+		}
+	}, [category, categories]);
 
 	const calculateTotals = (expensesData) => {
 		const today = new Date().toISOString().slice(0, 10);
@@ -177,10 +198,12 @@ export default function Dashboard() {
 			setTitle(expense.title || '');
 			setAmount(expense.amount || '');
 			setCategory(expense.category || '');
+			setSubcategory(expense.subcategory || "");
 		} else {
 			setTitle('');
 			setAmount('');
 			setCategory('');
+			setSubcategory("");
 		}
 		setShowModal(true);
 	};
@@ -190,6 +213,7 @@ export default function Dashboard() {
 		setTitle('');
 		setAmount('');
 		setCategory('');
+		setSubcategory("");
 		setEditExpense(null);
 	};
 
@@ -209,7 +233,7 @@ export default function Dashboard() {
 		if (editExpense) {
 			result = await supabase
 				.from('expenses')
-				.update({ title, amount: parseFloat(amount), category })
+				.update({ title, amount: parseFloat(amount), category, subcategory })
 				.eq('id', editExpense.id);
 		} else {
 			result = await supabase.from('expenses').insert([
@@ -217,6 +241,7 @@ export default function Dashboard() {
 					title,
 					amount: parseFloat(amount),
 					category,
+					subcategory,
 					user_id: user.id,
 				},
 			]);
@@ -231,7 +256,7 @@ export default function Dashboard() {
 	};
 
 	const handleDelete = async (id) => {
-		await supabase.from('expenses').delete().eq('id', id);
+		await supabase.from('expenses').delete().eq('id', id); ``
 		fetchExpenses();
 	};
 
@@ -331,6 +356,7 @@ export default function Dashboard() {
 												'rgba(75, 192, 192, 0.6)',
 												'rgba(153, 102, 255, 0.6)',
 												'rgba(255, 159, 64, 0.6)',
+												'rgba(40, 167, 69, 0.6)'
 											],
 											borderColor: [
 												'rgba(255, 99, 132, 1)',
@@ -339,6 +365,7 @@ export default function Dashboard() {
 												'rgba(75, 192, 192, 1)',
 												'rgba(153, 102, 255, 1)',
 												'rgba(255, 159, 64, 1)',
+												'rgba(40, 167, 69, 1)'
 											],
 											borderWidth: 1,
 										},
@@ -357,6 +384,8 @@ export default function Dashboard() {
 					</div>
 				</div>
 
+
+				{/* Modal for adding/editing expenses */}
 				{showModal && (
 					<div className="modal fade show d-block" tabIndex="-1" >
 						<div className="modal-dialog">
@@ -393,6 +422,24 @@ export default function Dashboard() {
 											{categories.map(category => (
 												<option key={category.id} value={category.name}>{category.name}</option>
 											))}
+										</select>
+										<select
+											value={subcategory}
+											onChange={(e) => setSubcategory(e.target.value)}
+											required
+											className="form-select mb-2 subcategory-select"
+											disabled={!category || subcategories.length === 0}
+										>
+											{subcategories.length === 0 ? (
+												<option value="" disabled>No subcategories available</option>
+											) : (
+												<>
+													<option value={""}>Select Subcategory</option>
+													{subcategories.map(sub => (
+														<option key={sub.name} value={sub.name}>{sub.name}</option>
+
+													))}
+												</>)}
 										</select>
 										<div className="modal-actions d-flex justify-content-between">
 											<button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>

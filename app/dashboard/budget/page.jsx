@@ -12,7 +12,7 @@ import {
 import { Bar } from 'react-chartjs-2';
 import '../../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../../components/BootstrapClient';
-import { data } from 'autoprefixer';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -162,12 +162,12 @@ export default function BudgetPage() {
       {
         label: 'Budget',
         data: history.map(h => h.budget),
-        backgroundColor: '#99e6e6',
+        backgroundColor: '#023e8aff',
       },
       {
         label: 'Spent',
         data: history.map(h => h.spent),
-        backgroundColor: '#008080',
+        backgroundColor: '#00b4d8ff',
       },
     ],
   };
@@ -293,6 +293,46 @@ export default function BudgetPage() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+
+        <div className="row">
+          <div className="col-sm-12-mb-4">
+            <h3 className="text-primary mb-4">Monthly Spending</h3>
+            <p className="text-secondary mb-4">
+              You have spent ₹{monthlySpent.toFixed(2)} this month, which is {percentageUsed.toFixed(2)}% of your budget.
+            </p>
+            <div className="progress mb-3" style={{ height: '20px' }}>
+              <div
+                className={`progress-bar ${percentageUsed >= 90 ? 'bg-danger' : 'bg-success'}`}
+                role="progressbar"
+                style={{ width: `${percentageUsed}%` }}
+                aria-valuenow={percentageUsed}
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                {percentageUsed.toFixed(2)}%
+              </div>
+            </div>
+            <div className="chart-container col-md-5">
+              <Bar
+                data={chartData}
+                options={{
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      position: 'top',
+                    },
+                    title: {
+                      display: true,
+                      text: 'Monthly Budget vs Spending History',
+                    }
+                  }
+                }
+                }
+              />
+            </div>
+
           </div>
         </div>
       </div>
