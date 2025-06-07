@@ -25,6 +25,7 @@ export default async function DashboardLayout({ children, modal }) {
           <h2 className="mb-5 fw-bold text-primary ">ExpenseTracker</h2>
           <nav className="nav flex-column">
             <Link href="/dashboard" className="nav-link text-ternary">Overview</Link>
+            <Link href="/dashboard/expenses" className="nav-link text-ternary">Expenses</Link>
             <Link href="/dashboard/budget" className="nav-link text-ternary">Budget</Link>
             <Link href="/dashboard/categories" className="nav-link text-ternary">Categories</Link>
             <Link href="/dashboard/settings" className="nav-link text-ternary">Settings</Link>
