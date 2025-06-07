@@ -17,13 +17,14 @@ export default function Dashboard() {
 	const [amount, setAmount] = useState('');
 	const [category, setCategory] = useState('');
 	const [subcategory, setSubcategory] = useState("");
+	const [description, setDescription] = useState("");
 	const [totals, setTotals] = useState({ daily: 0, monthly: 0 });
 	const [categoryData, setCategoryData] = useState({});
 	const [dailyLabels, setDailyLabels] = useState([]);
 	const [dailySpending, setDailySpending] = useState([]);
 	const [categories, setCategories] = useState([]);
 	const [subcategories, setSubcategories] = useState([]);
-
+	const [createdAt, setCreatedAt] = useState('');
 	useEffect(() => {
 		fetchExpenses();
 		fetchCategories();
@@ -199,11 +200,15 @@ export default function Dashboard() {
 			setAmount(expense.amount || '');
 			setCategory(expense.category || '');
 			setSubcategory(expense.subcategory || "");
+			setDescription(expense.description || "");
+			setCreatedAt(expense.created_at ? expense.created_at.slice(0, 10) : '');
 		} else {
 			setTitle('');
 			setAmount('');
 			setCategory('');
 			setSubcategory("");
+			setDescription("");
+			setCreatedAt(new Date().toISOString().slice(0, 10)); 
 		}
 		setShowModal(true);
 	};
@@ -214,6 +219,7 @@ export default function Dashboard() {
 		setAmount('');
 		setCategory('');
 		setSubcategory("");
+		setDescription("");
 		setEditExpense(null);
 	};
 
@@ -233,7 +239,7 @@ export default function Dashboard() {
 		if (editExpense) {
 			result = await supabase
 				.from('expenses')
-				.update({ title, amount: parseFloat(amount), category, subcategory })
+				.update({ title, amount: parseFloat(amount), category, subcategory, description, created_at: createdAt })
 				.eq('id', editExpense.id);
 		} else {
 			result = await supabase.from('expenses').insert([
@@ -242,6 +248,8 @@ export default function Dashboard() {
 					amount: parseFloat(amount),
 					category,
 					subcategory,
+					description,
+					created_at: createdAt,
 					user_id: user.id,
 				},
 			]);
@@ -291,7 +299,7 @@ export default function Dashboard() {
 								<div className="alert alert-info text-center">No expenses yet.</div>
 							</div>
 						) : (
-							expenses.map((exp) => (
+							expenses.slice(0,7).map((exp) => (
 								<div key={exp.id} className="col-md-6 mb-3">
 									<div className="card h-100">
 										<div className="card-body">
@@ -300,6 +308,7 @@ export default function Dashboard() {
 												₹{parseFloat(exp.amount).toFixed(2)}
 												<span className="badge bg-secondary ms-2">{exp.category}</span>
 											</p>
+											<p className="card-text text-truncate" style={{maxWidth: 120}}>{exp.description}</p>
 											<div className="d-flex gap-2 mt-3">
 												<button className="btn btn-outline-primary btn-sm" onClick={() => openModal(exp)}>Edit</button>
 												<button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(exp.id)}>Delete</button>
@@ -441,6 +450,20 @@ export default function Dashboard() {
 													))}
 												</>)}
 										</select>
+										<input
+											type = "date"
+											className = "from-control mb-2"
+											value = {createdAt}
+											onChange = {e => setCreatedAt(e.target.value)}
+											aria-label="Select Date"
+										/>
+										<input
+											type="text"
+											placeholder="Description (optional)"
+											value={description}
+											onChange={e => setDescription(e.target.value)}
+											className="form-control mb-2"
+										/>
 										<div className="modal-actions d-flex justify-content-between">
 											<button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
 											<button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>

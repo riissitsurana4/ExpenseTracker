@@ -40,6 +40,7 @@ const Signup = () => {
         setError(signUpError.message);
       } else {
         setSuccess('Account created successfully! Please check your email for confirmation.');
+        alert('Account created successfully! Please check your email for confirmation.');
         setEmail('');
         setPassword('');
         setConfirmPassword('');
