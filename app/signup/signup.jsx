@@ -37,7 +37,14 @@ const Signup = () => {
         password,
       });
       if (signUpError) {
-        setError(signUpError.message);
+        if (
+          signUpError.message.toLowerCase().includes('user already registered') ||
+          signUpError.message.toLowerCase().includes('already registered')
+        ) {
+          setError('User already registered with this email. Please log in instead.');
+        } else {
+          setError(signUpError.message);
+        }
       } else {
         setSuccess('Account created successfully! Please check your email for confirmation.');
         alert('Account created successfully! Please check your email for confirmation.');

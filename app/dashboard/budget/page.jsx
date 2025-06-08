@@ -27,7 +27,30 @@ export default function BudgetPage() {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const currentMonthDisplay = `${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`;
   const currentYear = new Date().getFullYear();
+  const [userCurrency, setUserCurrency] = useState('INR');
 
+  useEffect(() => {
+    const fetchCurrency = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('users')
+          .select('currency')
+          .eq('id', user.id)
+          .single();
+        setUserCurrency(data?.currency || 'INR');
+      }
+    };
+    fetchCurrency();
+  }, []);
+  const currencySign = (cur) => {
+    switch (cur) {
+      case 'USD': return '$';
+      case 'EUR': return '€';
+      case 'INR': return '₹';
+      default: return '';
+    }
+  };
   useEffect(() => {
     fetchBudgetAndSpending();
   }, []);
@@ -183,7 +206,7 @@ export default function BudgetPage() {
               <h3 className="text-primary ">Monthly Budget</h3>
               <p className="text-secondary">
                 {budget
-                  ? `Your budget for ${currentMonthDisplay} is ₹${budget.amount.toFixed(2)}`
+                  ? `Your budget for ${currentMonthDisplay} is ${currencySign(userCurrency)}${budget.amount.toFixed(2)}`
                   : 'You have not set a budget for this month.'}
               </p>
             </div>
@@ -193,7 +216,7 @@ export default function BudgetPage() {
               <h3 className="text-primary ">Yearly Budget</h3>
               <p className="text-secondary">
                 {yearlyBudget
-                  ? `Your budget for ${currentYear} is ₹${yearlyBudget ? yearlyBudget.toFixed(2) : '0.00'}`
+                  ? `Your budget for ${currentYear} is ${currencySign(userCurrency)}${yearlyBudget ? yearlyBudget.toFixed(2) : '0.00'}`
                   : 'You have not set a budget for this year.'}
               </p>
             </div>
@@ -300,7 +323,7 @@ export default function BudgetPage() {
           <div className="col-sm-12-mb-4">
             <h3 className="text-primary mb-4">Monthly Spending</h3>
             <p className="text-secondary mb-4">
-              You have spent ₹{monthlySpent.toFixed(2)} this month, which is {percentageUsed.toFixed(2)}% of your budget.
+              You have spent {currencySign(userCurrency)}{monthlySpent.toFixed(2)} this month, which is {percentageUsed.toFixed(2)}% of your budget.
             </p>
             <div className="progress mb-3" style={{ height: '20px' }}>
               <div

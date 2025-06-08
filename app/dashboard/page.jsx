@@ -25,6 +25,30 @@ export default function Dashboard() {
 	const [categories, setCategories] = useState([]);
 	const [subcategories, setSubcategories] = useState([]);
 	const [createdAt, setCreatedAt] = useState('');
+	const [userCurrency, setUserCurrency] = useState('INR');
+
+	useEffect(() => {
+		const fetchCurrency = async () => {
+			const { data: { user } } = await supabase.auth.getUser();
+			if (user) {
+				const { data } = await supabase
+					.from('users')
+					.select('currency')
+					.eq('id', user.id)
+					.single();
+				setUserCurrency(data?.currency || 'INR');
+			}
+		};
+		fetchCurrency();
+	}, []);
+	const currencySign = (cur) => {
+		switch (cur) {
+			case 'USD': return '$';
+			case 'EUR': return '€';
+			case 'INR': return '₹';
+			default: return '';
+		}
+	};
 	useEffect(() => {
 		fetchExpenses();
 		fetchCategories();
@@ -208,7 +232,7 @@ export default function Dashboard() {
 			setCategory('');
 			setSubcategory("");
 			setDescription("");
-			setCreatedAt(new Date().toISOString().slice(0, 10)); 
+			setCreatedAt(new Date().toISOString().slice(0, 10));
 		}
 		setShowModal(true);
 	};
@@ -275,15 +299,15 @@ export default function Dashboard() {
 				<div className="row">
 					<div className="card col-sm-3 mb-3 mb-sm-0 border-0">
 						<h3 className="card-title text-primary">Today's Expenses</h3>
-						<p className="card-body text-primary">₹{totals.daily.toFixed(2)}</p>
+						<p className="card-body text-primary">{currencySign(userCurrency)}{totals.daily.toFixed(2)}</p>
 					</div>
 					<div className="card col-sm-4 border-0">
 						<h3 className="card-title text-primary">This Month's Expenses</h3>
-						<p className="card-body text-primary">₹{totals.monthly.toFixed(2)}</p>
+						<p className="card-body text-primary">{currencySign(userCurrency)}{totals.monthly.toFixed(2)}</p>
 					</div>
 					<div className="card col-sm-2 border-0">
 						<h3 className="card-title text-primary">CY-Expenses</h3>
-						<p className="card-body text-primary">₹{totals.cy?.toFixed(2) ?? 0}</p>
+						<p className="card-body text-primary">{currencySign(userCurrency)}{totals.cy?.toFixed(2) ?? 0}</p>
 					</div>
 					<div className="card col-sm-3 border-0">
 						<h2 className="text-primary">Add New Expense</h2>
@@ -299,16 +323,16 @@ export default function Dashboard() {
 								<div className="alert alert-info text-center">No expenses yet.</div>
 							</div>
 						) : (
-							expenses.slice(0,7).map((exp) => (
+							expenses.slice(0, 7).map((exp) => (
 								<div key={exp.id} className="col-md-6 mb-3">
 									<div className="card h-100">
 										<div className="card-body">
 											<h5 className="card-title">{exp.title}</h5>
 											<p className="card-text expense-info">
-												₹{parseFloat(exp.amount).toFixed(2)}
+												{currencySign(userCurrency)}{Number(exp.amount).toFixed(2)}
 												<span className="badge bg-secondary ms-2">{exp.category}</span>
 											</p>
-											<p className="card-text text-truncate" style={{maxWidth: 120}}>{exp.description}</p>
+											<p className="card-text text-truncate" style={{ maxWidth: 120 }}>{exp.description}</p>
 											<div className="d-flex gap-2 mt-3">
 												<button className="btn btn-outline-primary btn-sm" onClick={() => openModal(exp)}>Edit</button>
 												<button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(exp.id)}>Delete</button>
@@ -326,153 +350,193 @@ export default function Dashboard() {
 				<div className="container-fluid">
 					<h2 className="text-primary">Expense Breakdown</h2>
 					<div className="row">
-						<div className="col-sm-6">
-							<Bar
-								data={{
-									labels: dailyLabels,
-									datasets: [
-										{
-											label: 'Daily Spending',
-											data: dailySpending,
-											backgroundColor: 'rgba(75, 192, 192, 0.6)',
-											borderColor: 'rgba(75, 192, 192, 1)',
-											borderWidth: 1,
-										},
-									],
-								}}
-								options={{
-									responsive: true,
-									plugins: {
-										legend: {
-											position: 'top',
-										},
-									},
-								}}
-							/>
-						</div>
-						<div className="col-sm-6">
-							<Pie
-								data={{
-									labels: Object.keys(categoryData),
-									datasets: [
-										{
-											label: 'Category Breakdown',
-											data: Object.values(categoryData),
-											backgroundColor: [
-												'rgba(255, 99, 132, 0.6)',
-												'rgba(54, 162, 235, 0.6)',
-												'rgba(255, 206, 86, 0.6)',
-												'rgba(75, 192, 192, 0.6)',
-												'rgba(153, 102, 255, 0.6)',
-												'rgba(255, 159, 64, 0.6)',
-												'rgba(40, 167, 69, 0.6)'
+						<div className="col-sm-6 mb-4">
+							<div className="card shadow-sm">
+								<div className="card-body">
+									<h5 className="card-title text-primary">Last 7 Days Spending</h5>
+									<Bar
+										data={{
+											labels: dailyLabels,
+											datasets: [
+												{
+													label: 'Daily Spending',
+													data: dailySpending,
+													backgroundColor: 'rgba(75, 192, 192, 0.6)',
+													borderColor: 'rgba(75, 192, 192, 1)',
+													borderWidth: 1,
+												},
 											],
-											borderColor: [
-												'rgba(255, 99, 132, 1)',
-												'rgba(54, 162, 235, 1)',
-												'rgba(255, 206, 86, 1)',
-												'rgba(75, 192, 192, 1)',
-												'rgba(153, 102, 255, 1)',
-												'rgba(255, 159, 64, 1)',
-												'rgba(40, 167, 69, 1)'
-											],
-											borderWidth: 1,
-										},
-									],
-								}}
-								options={{
-									responsive: true,
-									plugins: {
-										legend: {
-											position: 'top',
-										},
-									},
-								}}
-							/>
-						</div>
-					</div>
-				</div>
-
-
-				{/* Modal for adding/editing expenses */}
-				{showModal && (
-					<div className="modal fade show d-block" tabIndex="-1" >
-						<div className="modal-dialog">
-							<div className="modal-content">
-								<div className="modal-header">
-									<h3 className="modal-title" id="addExpenseModalLabel">{editExpense ? 'Edit Expense' : 'Add Expense'}</h3>
-									<button type="button" className="btn-close" onClick={closeModal} aria-label="Close"></button>
+										}}
+										options={{
+											responsive: true,
+											plugins: {
+												legend: {
+													position: 'top',
+												},
+											},
+										}}
+									/>
 								</div>
-								<div className="modal-body">
-									<form onSubmit={handleSubmit}>
-										<input
-											type="text"
-											placeholder="Title"
-											value={title}
-											onChange={(e) => setTitle(e.target.value)}
-											required
-											className="form-control mb-2"
-										/>
-										<input
-											type="number"
-											placeholder="Amount"
-											value={amount}
-											onChange={(e) => setAmount(e.target.value)}
-											required
-											className="form-control mb-2"
-										/>
-										<select
-											value={category}
-											onChange={(e) => setCategory(e.target.value)}
-											required
-											className="form-select mb-2 category-select"
-										>
-											<option value="">Select Category</option>
-											{categories.map(category => (
-												<option key={category.id} value={category.name}>{category.name}</option>
-											))}
-										</select>
-										<select
-											value={subcategory}
-											onChange={(e) => setSubcategory(e.target.value)}
-											required
-											className="form-select mb-2 subcategory-select"
-											disabled={!category || subcategories.length === 0}
-										>
-											{subcategories.length === 0 ? (
-												<option value="" disabled>No subcategories available</option>
-											) : (
-												<>
-													<option value={""}>Select Subcategory</option>
-													{subcategories.map(sub => (
-														<option key={sub.name} value={sub.name}>{sub.name}</option>
-
-													))}
-												</>)}
-										</select>
-										<input
-											type = "date"
-											className = "from-control mb-2"
-											value = {createdAt}
-											onChange = {e => setCreatedAt(e.target.value)}
-											aria-label="Select Date"
-										/>
-										<input
-											type="text"
-											placeholder="Description (optional)"
-											value={description}
-											onChange={e => setDescription(e.target.value)}
-											className="form-control mb-2"
-										/>
-										<div className="modal-actions d-flex justify-content-between">
-											<button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
-											<button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-										</div>
-									</form>
+							</div>
+						</div>
+						<div className="col-sm-6">
+							<div className="card shadow-sm mb-4">
+								<div className="card-body">
+									<h5 className="card-title text-primary">Category Breakdown</h5>
+									<Pie
+										data={{
+											labels: Object.keys(categoryData),
+											datasets: [
+												{
+													label: 'Category Breakdown',
+													data: Object.values(categoryData),
+													backgroundColor: [
+														'rgba(255, 99, 132, 0.6)',
+														'rgba(54, 162, 235, 0.6)',
+														'rgba(255, 206, 86, 0.6)',
+														'rgba(75, 192, 192, 0.6)',
+														'rgba(153, 102, 255, 0.6)',
+														'rgba(255, 159, 64, 0.6)',
+														'rgba(40, 167, 69, 0.6)'
+													],
+													borderColor: [
+														'rgba(255, 99, 132, 1)',
+														'rgba(54, 162, 235, 1)',
+														'rgba(255, 206, 86, 1)',
+														'rgba(75, 192, 192, 1)',
+														'rgba(153, 102, 255, 1)',
+														'rgba(255, 159, 64, 1)',
+														'rgba(40, 167, 69, 1)'
+													],
+													borderWidth: 1,
+												},
+											],
+										}}
+										options={{
+											responsive: true,
+											plugins: {
+												legend: {
+													position: 'top',
+												},
+											},
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+						<div className="col-md-6 mb-4">
+							<div className="card shadow-sm">
+								<div className="card-body">
+									<h5 className="card-title text-primary">chart 3</h5>
+								</div>
+							</div>
+						</div>
+						<div className="col-md-6 mb-4">
+							<div className="card shadow-sm">
+								<div className="card-body">
+									<h5 className="card-title text-primary">chart 4</h5>
+								</div>
+							</div>
+						</div>
+						<div className="col-md-6 mb-4">
+							<div className="card shadow-sm">
+								<div className="card-body">
+									<h5 className="card-title text-primary">chart 5</h5>
+								</div>
+							</div>
+						</div>
+						<div className="col-md-6 mb-4">
+							<div className="card shadow-sm">
+								<div className="card-body">
+									<h5 className="card-title text-primary">chart 6</h5>
 								</div>
 							</div>
 						</div>
 					</div>
+				</div>
+
+				{/* Modal for adding/editing expenses */}
+				{showModal && (
+					<>
+						<div className="modal-backdrop fade show" style={{ zIndex: 1040, position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)' }}></div>
+						<div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 1050, display: 'block', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', minWidth: 350, maxWidth: '95vw' }}>
+							<div className="modal-dialog">
+								<div className="modal-content">
+									<div className="modal-header">
+										<h3 className="modal-title" id="addExpenseModalLabel">{editExpense ? 'Edit Expense' : 'Add Expense'}</h3>
+										<button type="button" className="btn-close" onClick={closeModal} aria-label="Close"></button>
+									</div>
+									<div className="modal-body">
+										<form onSubmit={handleSubmit}>
+											<input
+												type="text"
+												placeholder="Title"
+												value={title}
+												onChange={(e) => setTitle(e.target.value)}
+												required
+												className="form-control mb-2"
+											/>
+											<input
+												type="number"
+												placeholder="Amount"
+												value={amount}
+												onChange={(e) => setAmount(e.target.value)}
+												required
+												className="form-control mb-2"
+											/>
+											<select
+												value={category}
+												onChange={(e) => setCategory(e.target.value)}
+												required
+												className="form-select mb-2 category-select"
+											>
+												<option value="">Select Category</option>
+												{categories.map(category => (
+													<option key={category.id} value={category.name}>{category.name}</option>
+												))}
+											</select>
+											<select
+												value={subcategory}
+												onChange={(e) => setSubcategory(e.target.value)}
+												required
+												className="form-select mb-2 subcategory-select"
+												disabled={!category || subcategories.length === 0}
+											>
+												{subcategories.length === 0 ? (
+													<option value="" disabled>No subcategories available</option>
+												) : (
+													<>
+														<option value={""}>Select Subcategory</option>
+														{subcategories.map(sub => (
+															<option key={sub.name} value={sub.name}>{sub.name}</option>
+
+														))}
+													</>)}
+											</select>
+											<input
+												type="date"
+												className="form-control mb-2"
+												value={createdAt}
+												onChange={e => setCreatedAt(e.target.value)}
+												aria-label="Select Date"
+											/>
+											<input
+												type="text"
+												placeholder="Description (optional)"
+												value={description}
+												onChange={e => setDescription(e.target.value)}
+												className="form-control mb-2"
+											/>
+											<div className="modal-actions d-flex justify-content-between">
+												<button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
+												<button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+											</div>
+										</form>
+									</div>
+								</div>
+							</div>
+						</div>
+					</>
 				)}
 			</div>
 

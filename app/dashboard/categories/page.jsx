@@ -110,7 +110,7 @@ export default function CategoriesPage() {
         setEditingSubcategoryId(null);
         fetchCategories();
     }
-
+ 
     async function deleteCategory(id) {
         if (!user) return;
         const { error: subError } = await supabase
