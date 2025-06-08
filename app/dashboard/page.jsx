@@ -26,7 +26,9 @@ export default function Dashboard() {
 	const [subcategories, setSubcategories] = useState([]);
 	const [createdAt, setCreatedAt] = useState('');
 	const [userCurrency, setUserCurrency] = useState('INR');
-
+	const [recurringType, setRecurringType] = useState('');
+	const [modeOfPayment, setModeOfPayment] = useState('');
+	
 	useEffect(() => {
 		const fetchCurrency = async () => {
 			const { data: { user } } = await supabase.auth.getUser();
@@ -162,7 +164,7 @@ export default function Dashboard() {
 						.select('name')
 						.eq('category_id', categoryId);
 					setSubcategories(data || []);
-					setSubcategory("");
+					if (!editExpense) setSubcategory(""); // <-- only reset on add, not edit
 				};
 				fetchSubcategories(selectedCategory.id);
 			}
@@ -223,16 +225,20 @@ export default function Dashboard() {
 			setTitle(expense.title || '');
 			setAmount(expense.amount || '');
 			setCategory(expense.category || '');
-			setSubcategory(expense.subcategory || "");
+			setSubcategory(expense.subcategory || ""); // <-- set subcategory from expense
 			setDescription(expense.description || "");
 			setCreatedAt(expense.created_at ? expense.created_at.slice(0, 10) : '');
+			setRecurringType(expense.recurring_type || '');
+			setModeOfPayment(expense.mode_of_payment || ""); // <-- also load mode of payment if present
 		} else {
 			setTitle('');
 			setAmount('');
 			setCategory('');
-			setSubcategory("");
+			setSubcategory(""); // <-- reset only on add
 			setDescription("");
 			setCreatedAt(new Date().toISOString().slice(0, 10));
+			setRecurringType('');
+			setModeOfPayment("");
 		}
 		setShowModal(true);
 	};
@@ -263,7 +269,7 @@ export default function Dashboard() {
 		if (editExpense) {
 			result = await supabase
 				.from('expenses')
-				.update({ title, amount: parseFloat(amount), category, subcategory, description, created_at: createdAt })
+				.update({ title, amount: parseFloat(amount), category, subcategory, description, created_at: createdAt, recurring_type: recurringType, is_recurring: !!recurringType })
 				.eq('id', editExpense.id);
 		} else {
 			result = await supabase.from('expenses').insert([
@@ -275,6 +281,8 @@ export default function Dashboard() {
 					description,
 					created_at: createdAt,
 					user_id: user.id,
+					recurring_type: recurringType,
+					is_recurring: !!recurringType
 				},
 			]);
 		}
@@ -527,6 +535,33 @@ export default function Dashboard() {
 												onChange={e => setDescription(e.target.value)}
 												className="form-control mb-2"
 											/>
+											<select 
+											value={modeOfPayment}
+											onChange={e => setModeOfPayment(e.target.value)}
+											required
+											className="form-select mb-2">
+												<option value="">Select Mode of Payment</option>
+												<option value="cash">Cash</option>
+												<option value="credit_card">Credit Card</option>
+												<option value="debit_card">Debit Card</option>
+												<option value="upi">UPI</option>
+												<option value="net_banking">Net Banking</option>
+												<option value="wallet">Wallet</option>
+											</select>
+											<div className="mb-2">
+												<label className="form-label">Recurring</label>
+												<select
+													className="form-select"
+													value={recurringType}
+													onChange={e => setRecurringType(e.target.value)}
+												>
+													<option value="">No</option>
+													<option value="weekly">Weekly</option>
+													<option value="monthly">Monthly</option>
+													<option value="yearly">Yearly</option>
+												</select>
+											</div>
+											
 											<div className="modal-actions d-flex justify-content-between">
 												<button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
 												<button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>

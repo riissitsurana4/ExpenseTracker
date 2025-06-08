@@ -28,6 +28,7 @@ export default function Expenses() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
     const [userCurrency, setUserCurrency] = useState('INR');
+    const [modeOfPayment, setModeOfPayment] = useState('');
 
     useEffect(() => {
         const fetchCurrency = async () => {
@@ -60,6 +61,7 @@ export default function Expenses() {
             setSubcategory(expense.subcategory || "");
             setDescription(expense.description || "");
             setCreatedAt(expense.created_at ? expense.created_at.slice(0, 10) : '');
+            setModeOfPayment(expense.mode_of_payment || ""); // <-- fix: load mode of payment
         } else {
             setTitle('');
             setAmount('');
@@ -67,6 +69,7 @@ export default function Expenses() {
             setSubcategory("");
             setDescription("");
             setCreatedAt(new Date().toISOString().slice(0, 10));
+            setModeOfPayment(""); // <-- reset on add
         }
         setShowModal(true);
     };
@@ -97,7 +100,7 @@ export default function Expenses() {
         if (editExpense) {
             result = await supabase
                 .from('expenses')
-                .update({ title, amount: formattedAmount, category, subcategory, description, created_at: createdAt })
+                .update({ title, amount: formattedAmount, category, subcategory, description, created_at: createdAt, mode_of_payment: modeOfPayment }) // <-- add mode_of_payment
                 .eq('id', editExpense.id);
         } else {
             result = await supabase.from('expenses').insert([
@@ -109,6 +112,7 @@ export default function Expenses() {
                     description,
                     created_at: createdAt,
                     user_id: user.id,
+                    mode_of_payment: modeOfPayment // <-- add mode_of_payment
                 },
             ]);
         }
@@ -203,13 +207,13 @@ export default function Expenses() {
                         .select('name')
                         .eq('category_id', categoryId);
                     setSubcategories(data || []);
-                    setSubcategory('');
+                    if (!editExpense) setSubcategory("");
                 };
                 fetchSubcategories(selectedCategory.id);
             }
         } else {
             setSubcategories([]);
-            setSubcategory('');
+            setSubcategory("");
         }
     }, [category, categories]);
 
@@ -217,191 +221,110 @@ export default function Expenses() {
         <>
             <BootstrapClient />
             <div className="container-fluid">
-                <h1 className="text-center mt-4 text-primary">Expenses</h1>
-                <div className="row align-items-center mb-3">
-                    {/* Main Filters Dropdown (Year, Month, Date) */}
-                    <div className="col-auto">
-                        <div className="dropdown">
-                            <button
-                                className="btn btn-outline-primary dropdown-toggle"
-                                type="button"
-                                id="filtersDropdown"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                                tabIndex={0}
-                            >
-                                Filters
-                            </button>
-                            <div className="dropdown-menu p-4" aria-labelledby="filtersDropdown" style={{ minWidth: 300 }}>
-                                <div className="mb-3">
-                                    <label className="form-label">Year</label>
-                                    <select
-                                        className="form-select"
-                                        value={year}
-                                        onChange={e => setYear(e.target.value)}
-                                        aria-label="Select Year"
-                                    >
-                                        <option value="">Select Year</option>
-                                        {years.map(y => (
-                                            <option key={y} value={y}>{y}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                {year && (
-                                    <div className="mb-3">
-                                        <label className="form-label">Month</label>
-                                        <select
-                                            className="form-select"
-                                            value={month}
-                                            onChange={e => setMonth(e.target.value)}
-                                            aria-label="Select Month"
-                                        >
-                                            <option value="">Select Month</option>
-                                            {months.filter(m => m.startsWith(year)).map(m => (
-                                                <option key={m} value={m}>
-                                                    {new Date(m + '-01').toLocaleString('default', { month: 'long' })} {m.slice(0, 4)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                <h1 className="text-center text-primary">Expenses</h1>
+                <div className="card mb-4 shadow-sm">
+                    <div className="card-body py-3 px-2">
+                        <div className="row g-2 align-items-end">
+                            <div className="col-12 col-md-2">
+                                <label className="form-label mb-1">Year</label>
+                                <select className="form-select" value={year} onChange={e => setYear(e.target.value)} aria-label="Select Year">
+                                    <option value="">All</option>
+                                    {years.map(y => (<option key={y} value={y}>{y}</option>))}
+                                </select>
+                            </div>
+                            <div className="col-12 col-md-2">
+                                <label className="form-label mb-1">Month</label>
+                                <select className="form-select" value={month} onChange={e => setMonth(e.target.value)} aria-label="Select Month" disabled={!year}>
+                                    <option value="">All</option>
+                                    {months.filter(m => m.startsWith(year)).map(m => (
+                                        <option key={m} value={m}>{new Date(m + '-01').toLocaleString('default', { month: 'long' })} {m.slice(0, 4)}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-12 col-md-2">
+                                <label className="form-label mb-1">Date</label>
+                                <input type="date" className="form-control" value={date} onChange={e => { setDate(e.target.value); setMonth(''); setYear(''); }} aria-label="Select Date" />
+                            </div>
+                            <div className="col-12 col-md-2">
+                                <label className="form-label mb-1">Start Date</label>
+                                <input type="date" className="form-control" value={startDate} onChange={e => setStartDate(e.target.value)} aria-label="Start Date" />
+                            </div>
+                            <div className="col-12 col-md-2">
+                                <label className="form-label mb-1">End Date</label>
+                                <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} aria-label="End Date" />
+                            </div>
+                            <div className="col-12 col-md-2">
+                                <label className="form-label mb-1">Category</label>
+                                <select className="form-select" value={filterCategory} onChange={e => setFilterCategory(e.target.value)} aria-label="Select Category">
+                                    <option value="">All</option>
+                                    {categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
+                                </select>
+                            </div>
+                            <div className="col-12 col-md-auto ms-auto d-flex justify-content-end gap-2 mt-2 mt-md-0">
+                                {(year || month || date || startDate || endDate || filterCategory) && (
+                                    <button className="btn btn-outline-secondary" onClick={() => { setYear(''); setMonth(''); setDate(''); setStartDate(''); setEndDate(''); setFilterCategory(''); }}>Clear Filters</button>
                                 )}
-                                <div className="mb-3">
-                                    <label className="form-label">Date</label>
-                                    <input
-                                        type="date"
-                                        className="form-control"
-                                        value={date}
-                                        onChange={e => {
-                                            setDate(e.target.value);
-                                            setMonth('');
-                                            setYear('');
-                                        }}
-                                        aria-label="Select Date"
-                                    />
-                                </div>
+                                <button className="btn btn-primary" onClick={() => openModal()}>Add Expense</button>
                             </div>
                         </div>
-                    </div>
-                    {/* Date Period Dropdown */}
-                    <div className="col-auto">
-                        <div className="dropdown">
-                            <button
-                                className="btn btn-outline-secondary dropdown-toggle"
-                                type="button"
-                                id="datePeriodDropdown"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                                Date Period
-                            </button>
-                            <div className="dropdown-menu p-4" aria-labelledby="datePeriodDropdown" style={{ minWidth: 250 }}>
-                                <div className="mb-3">
-                                    <label className="form-label">Start Date</label>
-                                    <input
-                                        type="date"
-                                        className="form-control"
-                                        value={startDate}
-                                        onChange={e => setStartDate(e.target.value)}
-                                        aria-label="Start Date"
-                                    />
-                                </div>
-                                <div className="mb-3">
-                                    <label className="form-label">End Date</label>
-                                    <input
-                                        type="date"
-                                        className="form-control"
-                                        value={endDate}
-                                        onChange={e => setEndDate(e.target.value)}
-                                        aria-label="End Date"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Category Dropdown styled like Filters */}
-                    <div className="col-auto">
-                        <div className="dropdown">
-                            <button
-                                className="btn btn-outline-primary dropdown-toggle"
-                                type="button"
-                                id="categoryDropdown"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                                Category
-                            </button>
-                            <div className="dropdown-menu p-4" aria-labelledby="categoryDropdown" style={{ minWidth: 200 }}>
-                                <div className="mb-2">
-                                    <label className="form-label">Category</label>
-                                    <select
-                                        className="form-select"
-                                        value={filterCategory}
-                                        onChange={e => setFilterCategory(e.target.value)}
-                                        aria-label="Select Category"
-                                    >
-                                        <option value="">All Categories</option>
-                                        {categories.map(cat => (
-                                            <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {(year || month || date || startDate || endDate || filterCategory) && (
-                        <div className="col-auto">
-                            <button className="btn btn-secondary" onClick={() => {
-                                setYear('');
-                                setMonth('');
-                                setDate('');
-                                setStartDate('');
-                                setEndDate('');
-                                setFilterCategory('');
-                            }}>
-                                Clear Filters
-                            </button>
-                        </div>
-                    )}
-                    <div className="col-auto">
-                        <button className="btn btn-primary" onClick={() => openModal()}>Add Expense</button>
                     </div>
                 </div>
                 <div className="row">
-                    <div className="col-sm-12 col-md-9">
-                        <h2 className="text-center text-secondary">Expenses List</h2>
-                        {fetchError && <div className="alert alert-danger">{fetchError}</div>}
-                        {loading ? (
-                            <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 120 }}>
-                                <div className="spinner-border text-primary" role="status">
-                                    <span className="visually-hidden">Loading...</span>
-                                </div>
+                    <div className="col-12">
+                        <div className="card shadow-sm">
+                            <div className="card-header bg-light border-bottom-0">
+                                <h2 className="text-primary h5 mb-0">Expenses List</h2>
                             </div>
-                        ) : (
-                            <div className="card shadow-sm">
-                                <div className="card-body p-2">
-                                    <div className="table-responsive" style={{ minWidth: '700px', maxWidth: '100vw', overflowX: 'auto' }}>
-                                        <table className="table table-striped table-hover table-bordered align-middle">
+                            <div className="card-body p-2">
+                                {fetchError && <div className="alert alert-danger">{fetchError}</div>}
+                                {loading ? (
+                                    <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 120 }}>
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="table-responsive w-100" style={{ minWidth: 0, maxWidth: '100vw', overflowX: 'auto' }}>
+                                        <table className="table table-striped table-hover table-bordered align-middle mb-0" style={{ width: '100%' }}>
                                             <thead className="table-light">
                                                 <tr>
-                                                    <th>Date</th>
-                                                    <th>Category</th>
-                                                    <th className="d-none d-md-table-cell">Subcategory</th>
-                                                    <th>Description</th>
-                                                    <th className="text-center">Amount</th>
-                                                    <th className="text-center">Actions</th>
+                                                    <th style={{ width: '18%' }}>Date</th>
+                                                    <th style={{ width: '18%' }}>Category</th>
+                                                    <th className="d-none d-md-table-cell" style={{ width: '16%' }}>Subcategory</th>
+                                                    <th className="d-none d-sm-table-cell" style={{ width: '16%' }}>Description</th>
+                                                    <th className="text-center" style={{ width: '14%' }}>Amount</th>
+                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '10%' }}>Recurring</th>
+                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '18%' }}>Mode of Payment</th>
+                                                    <th className="text-center" style={{ width: '12%' }}>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {paginated.length > 0 ? (
                                                     paginated.map((expense) => (
                                                         <tr key={expense.id}>
-                                                            <td>{expense.created_at.slice(0, 10)}</td>
-                                                            <td>{expense.category}</td>
-                                                            <td className="d-none d-md-table-cell">{expense.subcategory}</td>
-                                                            <td className="text-truncate" style={{ maxWidth: 120 }}>{expense.description}</td>
-                                                            <td className="fw-bold text-primary text-center" style={{ fontSize: '1.1rem' }}>
+                                                            <td style={{ wordBreak: 'break-word' }}>{expense.created_at.slice(0, 10)}</td>
+                                                            <td style={{ wordBreak: 'break-word' }}>{expense.category}</td>
+                                                            <td className="d-none d-md-table-cell" style={{ wordBreak: 'break-word' }}>{expense.subcategory}</td>
+                                                            <td className="d-none d-sm-table-cell text-truncate" style={{ maxWidth: 120, wordBreak: 'break-word' }}>{expense.description}</td>
+                                                            <td className="fw-bold text-primary text-center" style={{ fontSize: '1.1rem', wordBreak: 'break-word' }}>
                                                                 {currencySign(userCurrency)}{Number(expense.amount).toFixed(2)}
                                                             </td>
-                                                            <td className="text-center">
+                                                            <td className="text-center d-none d-sm-table-cell" style={{ wordBreak: 'break-word' }}>
+                                                                {expense.is_recurring ? (
+                                                                    <span className="badge bg-info text-dark">
+                                                                        {expense.recurring_type ? expense.recurring_type.charAt(0).toUpperCase() + expense.recurring_type.slice(1) : 'Yes'}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-secondary">No</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="text-center d-none d-sm-table-cell" style={{ wordBreak: 'break-word' }}>
+                                                                {expense.mode_of_payment
+                                                                    ? expense.mode_of_payment.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                                                                    : <span className="text-secondary">N/A</span>
+                                                                }
+                                                            </td>
+                                                            <td className="text-center" style={{ wordBreak: 'break-word', minWidth: 120 }}>
                                                                 <button className="btn btn-outline-primary btn-sm me-2" onClick={() => openModal(expense)}>Edit</button>
                                                                 <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(expense.id)}>Delete</button>
                                                             </td>
@@ -409,7 +332,7 @@ export default function Expenses() {
                                                     ))
                                                 ) : (
                                                     <tr>
-                                                        <td colSpan="6" className="text-center text-secondary">
+                                                        <td colSpan="8" className="text-center text-secondary">
                                                             No expenses found for the selected filters.
                                                         </td>
                                                     </tr>
@@ -417,9 +340,9 @@ export default function Expenses() {
                                             </tbody>
                                         </table>
                                     </div>
-                                </div>
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
 
@@ -466,12 +389,10 @@ export default function Expenses() {
                                                 placeholder="Amount"
                                                 value={amount}
                                                 onChange={(e) => {
-                                                    // Always keep two decimals in the input
                                                     const val = e.target.value;
                                                     if (val === "") {
                                                         setAmount("");
                                                     } else {
-                                                        // Only allow valid number input, format to two decimals if possible
                                                         const num = parseFloat(val);
                                                         if (!isNaN(num)) {
                                                             setAmount(num.toFixed(2));
@@ -526,6 +447,36 @@ export default function Expenses() {
                                                 onChange={e => setDescription(e.target.value)}
                                                 className="form-control mb-2"
                                             />
+                                            <select
+                                                value={modeOfPayment}
+                                                onChange={e => setModeOfPayment(e.target.value)}
+                                                required
+                                                className="form-select mb-2">
+                                                <option value="">Select Mode of Payment</option>
+                                                <option value="cash">Cash</option>
+                                                <option value="credit_card">Credit Card</option>
+                                                <option value="debit_card">Debit Card</option>
+                                                <option value="upi">UPI</option>
+                                                <option value="net_banking">Net Banking</option>
+                                                <option value="wallet">Wallet</option>
+                                            </select>
+                                            <div className="mb-2">
+                                                <label className="form-label">Recurring</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={editExpense?.recurring_type || ''}
+                                                    onChange={e => {
+                                                        if (editExpense) {
+                                                            setEditExpense({ ...editExpense, recurring_type: e.target.value });
+                                                        }
+                                                    }}
+                                                >
+                                                    <option value="">No</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="monthly">Monthly</option>
+                                                    <option value="yearly">Yearly</option>
+                                                </select>
+                                            </div>
                                             <div className="modal-actions d-flex justify-content-between">
                                                 <button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
                                                 <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
