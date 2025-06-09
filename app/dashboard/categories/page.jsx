@@ -186,7 +186,7 @@ export default function CategoriesPage() {
                         />
 
                         <button className="btn btn-primary" onClick={addSubcategory}>Add Subcategory</button>
-
+   
                     </div>
                 </div>
                 <div className="row">

@@ -22,6 +22,7 @@ export default function BudgetPage() {
   const [amountInput, setAmountInput] = useState('');
   const [yearlyAmountInput, setYearlyAmountInput] = useState('');
   const [monthlySpent, setMonthlySpent] = useState(0);
+  const [yearlySpent, setYearlySpent] = useState(0);
   const [history, setHistory] = useState([]);
   const [alert, setAlert] = useState('');
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -78,6 +79,12 @@ export default function BudgetPage() {
     setMonthlySpent(monthlySpent);
     setBudget(budgetData);
 
+    const currentYearStr = String(currentYear);
+    const yearlySpent = expenses
+      .filter(e => e.created_at.slice(0, 4) === currentYearStr)
+      .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+    setYearlySpent(yearlySpent);
+
     const { data: allBudgets } = await supabase
       .from('budgets')
       .select('*')
@@ -94,15 +101,10 @@ export default function BudgetPage() {
     if (yearlyBudgetData && yearlyBudgetData.amount !== undefined && yearlyBudgetData.amount !== null) {
       setYearlyBudget(yearlyBudgetData.amount);
       setYearlyAmountInput(yearlyBudgetData.amount.toString());
-
-    }
-
-    else {
+    } else {
       setYearlyBudget(0);
       setYearlyAmountInput('');
     }
-
-
 
     const monthlyHistory = allBudgets.map((b) => {
       const spent = expenses
@@ -195,127 +197,124 @@ export default function BudgetPage() {
     ],
   };
 
+  const totalYearlySpent = yearlySpent;
+
+
+  const totalMonthlyBudgets = history.reduce((sum, h) => sum + (parseFloat(h.budget) || 0), 0);
+
+  const exceedsYearly = yearlyBudget && totalMonthlyBudgets > yearlyBudget;
+
   return (
     <>
       <BootstrapClient />
       <div className="container-fluid">
         <h1 className="text-primary fw-bold text-center mb-5 mt-0">Budget Overview</h1>
-        <div className="row">
-          <div className="card col-sm-6 mb-4 border-0 ">
-            <div className="card-body">
-              <h3 className="text-primary ">Monthly Budget</h3>
-              <p className="text-secondary">
-                {budget
-                  ? `Your budget for ${currentMonthDisplay} is ${currencySign(userCurrency)}${budget.amount.toFixed(2)}`
-                  : 'You have not set a budget for this month.'}
-              </p>
+        <div className="row mb-4">
+          <div className="col-md-3 mb-2">
+            <div className="card shadow-sm border-0 h-100">
+              <div className="card-body text-center">
+                <h6 className="text-muted">This Month's Budget <span className="badge bg-light text-dark ms-1">{new Date(currentMonth + '-01').toLocaleString('default', { month: 'long' })}</span></h6>
+                <h2 className="fw-bold text-primary">{currencySign(userCurrency)}{budget ? budget.amount.toFixed(2) : '0.00'}</h2>
+                <span className={`badge ${monthlySpent > (budget?.amount || 0) ? 'bg-danger' : 'bg-success'}`}>
+                  {monthlySpent > (budget?.amount || 0) ? 'Over Budget' : 'On Track'}
+                </span>
+              </div>
             </div>
           </div>
-          <div className="card col-sm-6 mb-4 border-0 ">
-            <div className="card-body">
-              <h3 className="text-primary ">Yearly Budget</h3>
-              <p className="text-secondary">
-                {yearlyBudget
-                  ? `Your budget for ${currentYear} is ${currencySign(userCurrency)}${yearlyBudget ? yearlyBudget.toFixed(2) : '0.00'}`
-                  : 'You have not set a budget for this year.'}
-              </p>
+          <div className="col-md-3 mb-2">
+            <div className="card shadow-sm border-0 h-100">
+              <div className="card-body text-center">
+                <h6 className="text-muted">This Month's Spent</h6>
+                <h2 className="fw-bold text-info">{currencySign(userCurrency)}{monthlySpent.toFixed(2)}</h2>
+                <div className="progress" style={{ height: '8px' }}>
+                  <div className={`progress-bar ${percentageUsed >= 90 ? 'bg-danger' : 'bg-success'}`} style={{ width: `${percentageUsed}%` }} />
+                </div>
+                <small>{percentageUsed.toFixed(2)}% used</small>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-3 mb-2">
+            <div className="card shadow-sm border-0 h-100 bg-white border-primary">
+              <div className="card-body text-center">
+                <h6 className="text-muted">Yearly Budget</h6>
+                <h2 className="fw-bold text-primary">{currencySign(userCurrency)}{yearlyBudget ? yearlyBudget.toFixed(2) : '0.00'}</h2>
+                <span className={`badge px-3 py-2 fs-6 ${totalYearlySpent > (yearlyBudget || 0) ? 'bg-danger' : 'bg-success'}`}
+                  style={{ fontWeight: 500 }}>
+                  {totalYearlySpent > (yearlyBudget || 0) ? 'Over Budget' : 'On Track'}
+                </span>
+                <div className="mt-2">
+                  <small className="text-secondary">{currentYear}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-3 mb-2">
+            <div className="card shadow-sm border-0 h-100">
+              <div className="card-body text-center">
+                <h6 className="text-muted">Yearly Spent</h6>
+                <h2 className="fw-bold text-info">{currencySign(userCurrency)}{totalYearlySpent.toFixed(2)}</h2>
+                <div className="progress mx-auto mt-2" style={{ height: '8px', width: '80%' }}>
+                  <div
+                    className={`progress-bar ${totalYearlySpent > (yearlyBudget || 0) ? 'bg-danger' : totalYearlySpent > 0.9 * (yearlyBudget || 1) ? 'bg-warning' : 'bg-success'}`}
+                    role="progressbar"
+                    style={{ width: yearlyBudget ? `${Math.min((totalYearlySpent / yearlyBudget) * 100, 100)}%` : '0%' }}
+                    aria-valuenow={yearlyBudget ? (totalYearlySpent / yearlyBudget) * 100 : 0}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  >
+                  </div>
+                </div>
+                <small className="text-secondary">{yearlyBudget ? `${Math.min((totalYearlySpent / yearlyBudget) * 100, 100).toFixed(1)}% of yearly budget used` : '0% used'}</small>
+              </div>
             </div>
           </div>
         </div>
-        <div className="row">
+        <div className="row mb-4">
           <div className="col-sm-6 mb-4">
-            {!budget ? (
-              <form onSubmit={handleSave} className="budget-form">
-                <div className="mb-3">
-                  <label className="form-label text-secondary me-3">
-                    Set your monthly Budget
-                  </label>
+            <form onSubmit={handleSave} className="row g-2 align-items-center mb-4">
+              <div className="col-auto">
+                <label className="form-label mb-0">Monthly Budget</label>
+              </div>
+              <div className="col-auto">
+                <div className="input-group">
+                  <span className="input-group-text">{currencySign(userCurrency)}</span>
                   <input
                     type="number"
-                    placeholder="Enter your monthly budget"
+                    className="form-control"
+                    placeholder="Enter amount"
                     value={amountInput}
-                    onChange={(e) => setAmountInput(e.target.value)}
+                    onChange={e => setAmountInput(e.target.value)}
                     required
-                    className="form-control w-25 d-inline-block"
                   />
-                  <button
-                    type="submit"
-                    className="btn btn-outline-primary ms-3"
-                  >
-                    Set Budget
-                  </button>
                 </div>
-              </form>
-            ) : (
-              <form onSubmit={handleSave} className="budget-form">
-                <div className="mb-3">
-                  <label className="form-label text-secondary me-3">
-                    Update your monthly Budget
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="Enter your monthly budget"
-                    value={amountInput}
-                    onChange={(e) => setAmountInput(e.target.value)}
-                    required
-                    className="form-control w-25 d-inline-block"
-                  />
-                  <button
-                    type="submit"
-                    className="btn btn-outline-primary ms-3"
-                  >
-                    Update Budget
-                  </button>
-                </div>
-              </form>
-            )}
+              </div>
+              <div className="col-auto">
+                <button type="submit" className="btn btn-primary">{budget ? 'Update' : 'Set'} Budget</button>
+              </div>
+            </form>
           </div>
           <div className="col-sm-6 mb-4">
-            {!yearlyBudget ? (
-              <form onSubmit={handleYearlySave} className="budget-form">
-                <div className="mb-3">
-                  <label className="form-label text-secondary me-3">
-                    Set your Yearly Budget
-                  </label>
+            <form onSubmit={handleYearlySave} className="row g-2 align-items-center mb-4">
+              <div className="col-auto">
+                <label className="form-label mb-0">Yearly Budget</label>
+              </div>
+              <div className="col-auto">
+                <div className="input-group">
+                  <span className="input-group-text">{currencySign(userCurrency)}</span>
                   <input
                     type="number"
-                    placeholder="Enter your yearly budget"
+                    className="form-control"
+                    placeholder="Enter amount"
                     value={yearlyAmountInput}
-                    onChange={(e) => setYearlyAmountInput(e.target.value)}
+                    onChange={e => setYearlyAmountInput(e.target.value)}
                     required
-                    className="form-control w-25 d-inline-block"
                   />
-                  <button
-                    type="submit"
-                    className="btn btn-outline-primary ms-3"
-                  >
-                    Set Budget
-                  </button>
                 </div>
-              </form>
-            ) : (
-              <form onSubmit={handleYearlySave} className="budget-form">
-                <div className="mb-3">
-                  <label className="form-label text-secondary me-3">
-                    Update your Yearly Budget
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="Enter your yearly budget"
-                    value={yearlyAmountInput}
-                    onChange={(e) => setYearlyAmountInput(e.target.value)}
-                    required
-                    className="form-control w-25 d-inline-block"
-                  />
-                  <button
-                    type="submit"
-                    className="btn btn-outline-primary ms-3"
-                  >
-                    Update Budget
-                  </button>
-                </div>
-              </form>
-            )}
+              </div>
+              <div className="col-auto">
+                <button type="submit" className="btn btn-primary">{yearlyBudget ? 'Update' : 'Set'} Budget</button>
+              </div>
+            </form>
           </div>
         </div>
 

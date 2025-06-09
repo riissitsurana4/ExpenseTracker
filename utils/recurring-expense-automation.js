@@ -29,7 +29,6 @@ export default async function handler(req, res) {
   }
 
   for (const exp of recurringExpenses) {
-    // Only create a new expense if next_occurrence is today or earlier
     if (!exp.next_occurrence || new Date(exp.next_occurrence) > new Date(today)) continue;
 
     await supabase.from('expenses').insert([{
@@ -45,7 +44,6 @@ export default async function handler(req, res) {
       next_occurrence: null
     }]);
 
-    // Update the original expense's next_occurrence
     const newNext = calculateNextOccurrence(exp.next_occurrence, exp.recurring_type);
     await supabase
       .from('expenses')
