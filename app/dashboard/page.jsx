@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabase/client';
-import { Chart, BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
-import { Bar, Pie } from 'react-chartjs-2';
-Chart.register(BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend);
+import { Chart, BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement } from 'chart.js';
+import { Bar, Pie, Line, Doughnut } from 'react-chartjs-2';
+Chart.register(BarElement, ArcElement, CategoryScale, LinearScale, Tooltip, Legend, PointElement, LineElement);
 import '../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../components/BootstrapClient';
 import { presetcategories } from '../../components/presets.jsx'
@@ -28,7 +28,12 @@ export default function Dashboard() {
 	const [userCurrency, setUserCurrency] = useState('INR');
 	const [recurringType, setRecurringType] = useState('');
 	const [modeOfPayment, setModeOfPayment] = useState('');
-	
+	const [monthlyLabels, setMonthlyLabels] = useState([]);
+	const [monthlySpending, setMonthlySpending] = useState([]);
+	const [topCategories, setTopCategories] = useState([]);
+	const [paymentMethodData, setPaymentMethodData] = useState([]);
+	const [recurringData, setRecurringData] = useState([]);
+
 	useEffect(() => {
 		const fetchCurrency = async () => {
 			const { data: { user } } = await supabase.auth.getUser();
@@ -217,6 +222,34 @@ export default function Dashboard() {
 		);
 		setDailyLabels(last7);
 		setDailySpending(daily);
+
+		const year = now.getFullYear();
+		const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+		const monthly = months.map(m =>
+			expensesData.filter(exp => exp.created_at.startsWith(m))
+				.reduce((sum, e) => sum + parseFloat(e.amount), 0)
+		);
+		setMonthlyLabels(months);
+		setMonthlySpending(monthly);
+
+		const sortedCats = Object.entries(categories)
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, 5);
+		setTopCategories(Object.fromEntries(sortedCats));
+
+		const paymentMethods = {};
+		expensesData.forEach(exp => {
+			const mode = exp.mode_of_payment || 'Other';
+			paymentMethods[mode] = (paymentMethods[mode] || 0) + parseFloat(exp.amount);
+		});
+		setPaymentMethodData(paymentMethods);
+
+		const recurring = { Recurring: 0, 'One-Time': 0 };
+		expensesData.forEach(exp => {
+			if (exp.is_recurring) recurring['Recurring'] += parseFloat(exp.amount);
+			else recurring['One-Time'] += parseFloat(exp.amount);
+		});
+		setRecurringData(recurring);
 	};
 
 	const openModal = (expense = null) => {
@@ -435,21 +468,90 @@ export default function Dashboard() {
 						<div className="col-md-6 mb-4">
 							<div className="card shadow-sm">
 								<div className="card-body">
-									<h5 className="card-title text-primary">chart 3</h5>
+									<h5 className="card-title text-primary">Monthly Spending Trend</h5>
+									<Line
+										data={{
+											labels: monthlyLabels,
+											datasets: [
+												{
+													label: 'Monthly Spending',
+													data: monthlySpending,
+													borderColor: 'rgba(54, 162, 235, 1)',
+													backgroundColor: 'rgba(54, 162, 235, 0.2)',
+													pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+													pointBorderColor: '#fff',
+												},
+											],
+										}}
+										options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
+									/>
 								</div>
 							</div>
 						</div>
 						<div className="col-md-6 mb-4">
 							<div className="card shadow-sm">
 								<div className="card-body">
-									<h5 className="card-title text-primary">chart 4</h5>
+									<h5 className="card-title text-primary">Top 5 Expense Categories</h5>
+									<Bar
+										data={{
+											labels: Object.keys(topCategories),
+											datasets: [{
+												label: 'Amount',
+												data: Object.values(topCategories),
+												backgroundColor: [
+													'rgba(255, 99, 132, 0.6)',
+													'rgba(54, 162, 235, 0.6)',
+													'rgba(255, 206, 86, 0.6)',
+													'rgba(75, 192, 192, 0.6)',
+													'rgba(153, 102, 255, 0.6)'
+												],
+												borderColor: [
+													'rgba(255, 99, 132, 1)',
+													'rgba(54, 162, 235, 1)',
+													'rgba(255, 206, 86, 1)',
+													'rgba(75, 192, 192, 1)',
+													'rgba(153, 102, 255, 1)'
+												],
+												borderWidth: 1,
+											},
+											],
+										}}
+										options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
+									/>
 								</div>
 							</div>
 						</div>
 						<div className="col-md-6 mb-4">
 							<div className="card shadow-sm">
 								<div className="card-body">
-									<h5 className="card-title text-primary">chart 5</h5>
+									<h5 className="card-title text-primary">Payment Method</h5>
+									<Pie
+										data={{
+											labels: Object.keys(paymentMethodData),
+											datasets: [{
+												label: 'Payment Method',
+												data: Object.values(paymentMethodData),
+												backgroundColor: [
+													'rgba(255, 99, 132, 0.6)',
+													'rgba(54, 162, 235, 0.6)',
+													'rgba(255, 206, 86, 0.6)',
+													'rgba(75, 192, 192, 0.6)',
+													'rgba(153, 102, 255, 0.6)',
+													'rgba(255, 159, 64, 0.6)'
+												],
+												borderColor: [
+													'rgba(255, 99, 132, 1)',
+													'rgba(54, 162, 235, 1)',
+													'rgba(255, 206, 86, 1)',
+													'rgba(75, 192, 192, 1)',
+													'rgba(153, 102, 255, 1)',
+													'rgba(255, 159, 64, 1)'
+												],
+												borderWidth: 1,
+											}],
+										}}
+										options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
+									/>
 								</div>
 							</div>
 						</div>
@@ -535,11 +637,11 @@ export default function Dashboard() {
 												onChange={e => setDescription(e.target.value)}
 												className="form-control mb-2"
 											/>
-											<select 
-											value={modeOfPayment}
-											onChange={e => setModeOfPayment(e.target.value)}
-											required
-											className="form-select mb-2">
+											<select
+												value={modeOfPayment}
+												onChange={e => setModeOfPayment(e.target.value)}
+												required
+												className="form-select mb-2">
 												<option value="">Select Mode of Payment</option>
 												<option value="cash">Cash</option>
 												<option value="credit_card">Credit Card</option>
@@ -561,7 +663,7 @@ export default function Dashboard() {
 													<option value="yearly">Yearly</option>
 												</select>
 											</div>
-											
+
 											<div className="modal-actions d-flex justify-content-between">
 												<button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
 												<button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
