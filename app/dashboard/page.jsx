@@ -392,53 +392,179 @@ export default function Dashboard() {
 					<h2 className="text-primary">Expense Breakdown</h2>
 					<div className="row">
 						<div className="col-sm-6 mb-4">
-							<div className="card shadow-sm">
-								<div className="card-body">
+							<div className="card shadow-sm" style={{ height: '400px' }}>
+								<div className="card-body d-flex flex-column justify-content-center align-items-center" style={{ height: '100%' }}>
 									<h5 className="card-title text-primary">Last 7 Days Spending</h5>
-									<Bar
-										data={{
-											labels: dailyLabels,
-											datasets: [
-												{
-													label: 'Daily Spending',
-													data: dailySpending,
-													backgroundColor: 'rgba(75, 192, 192, 0.6)',
-													borderColor: 'rgba(75, 192, 192, 1)',
-													borderWidth: 1,
+									<div style={{ width: '100%', height: '300px' }}>
+										<Bar
+											data={{
+												labels: dailyLabels,
+												datasets: [
+													{
+														label: 'Daily Spending',
+														data: dailySpending,
+														backgroundColor: 'rgba(75, 192, 192, 0.6)',
+														borderColor: 'rgba(75, 192, 192, 1)',
+														borderWidth: 1,
+													},
+												],
+											}}
+											options={{
+												responsive: true,
+												maintainAspectRatio: false,
+												plugins: {
+													legend: {
+														position: 'top',
+													},
 												},
-											],
-										}}
-										options={{
-											responsive: true,
-											plugins: {
-												legend: {
-													position: 'top',
-												},
-											},
-										}}
-									/>
+											}}
+										/>
+									</div>
 								</div>
 							</div>
 						</div>
-						<div className="col-sm-6">
-							<div className="card shadow-sm mb-4">
-								<div className="card-body">
+						<div className="col-sm-6 mb-4">
+							<div className="card shadow-sm" style={{ height: '400px' }}>
+								<div className="card-body d-flex flex-column justify-content-center align-items-center" style={{ height: '100%' }}>
 									<h5 className="card-title text-primary">Category Breakdown</h5>
-									<Pie
-										data={{
-											labels: Object.keys(categoryData),
-											datasets: [
-												{
-													label: 'Category Breakdown',
-													data: Object.values(categoryData),
+									<div style={{ width: '100%', height: '300px' }}>
+										<Pie
+											data={{
+												labels: Object.keys(categoryData),
+												datasets: [
+													{
+														label: 'Category Breakdown',
+														data: Object.values(categoryData),
+														backgroundColor: [
+															'rgba(255, 99, 132, 0.6)',
+															'rgba(54, 162, 235, 0.6)',
+															'rgba(255, 206, 86, 0.6)',
+															'rgba(75, 192, 192, 0.6)',
+															'rgba(153, 102, 255, 0.6)',
+															'rgba(255, 159, 64, 0.6)',
+															'rgba(40, 167, 69, 0.6)'
+														],
+														borderColor: [
+															'rgba(255, 99, 132, 1)',
+															'rgba(54, 162, 235, 1)',
+															'rgba(255, 206, 86, 1)',
+															'rgba(75, 192, 192, 1)',
+															'rgba(153, 102, 255, 1)',
+															'rgba(255, 159, 64, 1)',
+															'rgba(40, 167, 69, 1)'
+														],
+														borderWidth: 1,
+													},
+												],
+											}}
+											options={{
+												responsive: true,
+												maintainAspectRatio: false,
+												plugins: {
+													legend: {
+														position: 'top',
+													},
+												},
+											}}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="col-md-6 mb-4">
+							<div className="card shadow-sm" style={{ height: '400px' }}>
+								<div className="card-body d-flex flex-column justify-content-center align-items-center" style={{ height: '100%' }}>
+									<h5 className="card-title text-primary">Monthly Spending Trend</h5>
+									<div style={{ width: '100%', height: '300px' }}>
+										<Line
+											data={{
+												labels: monthlyLabels,
+												datasets: [
+													{
+														label: 'Monthly Spending',
+														data: monthlySpending,
+														borderColor: 'rgba(54, 162, 235, 1)',
+														backgroundColor: 'rgba(54, 162, 235, 0.2)',
+														pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+														pointBorderColor: '#fff',
+													},
+												],
+											}}
+											options={{
+												responsive: true,
+												maintainAspectRatio: false,
+												plugins: {
+													legend: {
+														position: 'top',
+													},
+												},
+											}}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="col-md-6 mb-4">
+							<div className="card shadow-sm" style={{ height: '400px' }}>
+								<div className="card-body d-flex flex-column justify-content-center align-items-center" style={{ height: '100%' }}>
+									<h5 className="card-title text-primary">Top 5 Expense Categories</h5>
+									<div style={{ width: '100%', height: '300px' }}>
+										<Bar
+											data={{
+												labels: Object.keys(topCategories),
+												datasets: [{
+													label: 'Amount',
+													data: Object.values(topCategories),
+													backgroundColor: [
+														'rgba(255, 99, 132, 0.6)',
+														'rgba(54, 162, 235, 0.6)',
+														'rgba(255, 206, 86, 0.6)',
+														'rgba(75, 192, 192, 0.6)',
+														'rgba(153, 102, 255, 0.6)'
+													],
+													borderColor: [
+														'rgba(255, 99, 132, 1)',
+														'rgba(54, 162, 235, 1)',
+														'rgba(255, 206, 86, 1)',
+														'rgba(75, 192, 192, 1)',
+														'rgba(153, 102, 255, 1)'
+													],
+													borderWidth: 1,
+												},
+												],
+											}}
+											options={{
+												responsive: true,
+												maintainAspectRatio: false,
+												plugins: {
+													legend: {
+														position: 'top',
+													},
+												},
+											}}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="col-md-6 mb-4">
+							<div className="card shadow-sm" style={{ height: '400px' }}>
+								<div className="card-body d-flex flex-column justify-content-center align-items-center" style={{ height: '100%' }}>
+									<h5 className="card-title text-primary">Payment Method</h5>
+									<div style={{ width: '100%', height: '300px' }}>
+										<Pie
+											data={{
+												labels: Object.keys(paymentMethodData),
+												datasets: [{
+													label: 'Payment Method',
+													data: Object.values(paymentMethodData),
 													backgroundColor: [
 														'rgba(255, 99, 132, 0.6)',
 														'rgba(54, 162, 235, 0.6)',
 														'rgba(255, 206, 86, 0.6)',
 														'rgba(75, 192, 192, 0.6)',
 														'rgba(153, 102, 255, 0.6)',
-														'rgba(255, 159, 64, 0.6)',
-														'rgba(40, 167, 69, 0.6)'
+														'rgba(255, 159, 64, 0.6)'
 													],
 													borderColor: [
 														'rgba(255, 99, 132, 1)',
@@ -446,119 +572,31 @@ export default function Dashboard() {
 														'rgba(255, 206, 86, 1)',
 														'rgba(75, 192, 192, 1)',
 														'rgba(153, 102, 255, 1)',
-														'rgba(255, 159, 64, 1)',
-														'rgba(40, 167, 69, 1)'
+														'rgba(255, 159, 64, 1)'
 													],
 													borderWidth: 1,
+												}],
+											}}
+											options={{
+												responsive: true,
+												maintainAspectRatio: false,
+												plugins: {
+													legend: {
+														position: 'top',
+													},
 												},
-											],
-										}}
-										options={{
-											responsive: true,
-											plugins: {
-												legend: {
-													position: 'top',
-												},
-											},
-										}}
-									/>
+											}}
+										/>
+									</div>
 								</div>
 							</div>
 						</div>
 						<div className="col-md-6 mb-4">
 							<div className="card shadow-sm">
 								<div className="card-body">
-									<h5 className="card-title text-primary">Monthly Spending Trend</h5>
-									<Line
-										data={{
-											labels: monthlyLabels,
-											datasets: [
-												{
-													label: 'Monthly Spending',
-													data: monthlySpending,
-													borderColor: 'rgba(54, 162, 235, 1)',
-													backgroundColor: 'rgba(54, 162, 235, 0.2)',
-													pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-													pointBorderColor: '#fff',
-												},
-											],
-										}}
-										options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
-									/>
-								</div>
-							</div>
-						</div>
-						<div className="col-md-6 mb-4">
-							<div className="card shadow-sm">
-								<div className="card-body">
-									<h5 className="card-title text-primary">Top 5 Expense Categories</h5>
-									<Bar
-										data={{
-											labels: Object.keys(topCategories),
-											datasets: [{
-												label: 'Amount',
-												data: Object.values(topCategories),
-												backgroundColor: [
-													'rgba(255, 99, 132, 0.6)',
-													'rgba(54, 162, 235, 0.6)',
-													'rgba(255, 206, 86, 0.6)',
-													'rgba(75, 192, 192, 0.6)',
-													'rgba(153, 102, 255, 0.6)'
-												],
-												borderColor: [
-													'rgba(255, 99, 132, 1)',
-													'rgba(54, 162, 235, 1)',
-													'rgba(255, 206, 86, 1)',
-													'rgba(75, 192, 192, 1)',
-													'rgba(153, 102, 255, 1)'
-												],
-												borderWidth: 1,
-											},
-											],
-										}}
-										options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
-									/>
-								</div>
-							</div>
-						</div>
-						<div className="col-md-6 mb-4">
-							<div className="card shadow-sm">
-								<div className="card-body">
-									<h5 className="card-title text-primary">Payment Method</h5>
-									<Pie
-										data={{
-											labels: Object.keys(paymentMethodData),
-											datasets: [{
-												label: 'Payment Method',
-												data: Object.values(paymentMethodData),
-												backgroundColor: [
-													'rgba(255, 99, 132, 0.6)',
-													'rgba(54, 162, 235, 0.6)',
-													'rgba(255, 206, 86, 0.6)',
-													'rgba(75, 192, 192, 0.6)',
-													'rgba(153, 102, 255, 0.6)',
-													'rgba(255, 159, 64, 0.6)'
-												],
-												borderColor: [
-													'rgba(255, 99, 132, 1)',
-													'rgba(54, 162, 235, 1)',
-													'rgba(255, 206, 86, 1)',
-													'rgba(75, 192, 192, 1)',
-													'rgba(153, 102, 255, 1)',
-													'rgba(255, 159, 64, 1)'
-												],
-												borderWidth: 1,
-											}],
-										}}
-										options={{ responsive: true, plugins: { legend: { position: 'top' } } }}
-									/>
-								</div>
-							</div>
-						</div>
-						<div className="col-md-6 mb-4">
-							<div className="card shadow-sm">
-								<div className="card-body">
-									<h5 className="card-title text-primary">chart 6</h5>
+									<h5 className="card-title text-primary">Savings Over Time</h5>
+										
+									
 								</div>
 							</div>
 						</div>

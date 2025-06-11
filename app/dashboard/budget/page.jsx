@@ -1,20 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../utils/supabase/client';
-import {
-  Chart,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
 import '../../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../../components/BootstrapClient';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
-Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 export default function BudgetPage() {
   const [budget, setBudget] = useState(null);
@@ -181,29 +170,6 @@ export default function BudgetPage() {
     ? Math.min((monthlySpent / budget.amount) * 100, 100)
     : 0;
 
-  const chartData = {
-    labels: history.map(h => h.month),
-    datasets: [
-      {
-        label: 'Budget',
-        data: history.map(h => h.budget),
-        backgroundColor: '#023e8aff',
-      },
-      {
-        label: 'Spent',
-        data: history.map(h => h.spent),
-        backgroundColor: '#00b4d8ff',
-      },
-    ],
-  };
-
-  const totalYearlySpent = yearlySpent;
-
-
-  const totalMonthlyBudgets = history.reduce((sum, h) => sum + (parseFloat(h.budget) || 0), 0);
-
-  const exceedsYearly = yearlyBudget && totalMonthlyBudgets > yearlyBudget;
-
   return (
     <>
       <BootstrapClient />
@@ -238,9 +204,9 @@ export default function BudgetPage() {
               <div className="card-body text-center">
                 <h6 className="text-muted">Yearly Budget</h6>
                 <h2 className="fw-bold text-primary">{currencySign(userCurrency)}{yearlyBudget ? yearlyBudget.toFixed(2) : '0.00'}</h2>
-                <span className={`badge px-3 py-2 fs-6 ${totalYearlySpent > (yearlyBudget || 0) ? 'bg-danger' : 'bg-success'}`}
+                <span className={`badge px-3 py-2 fs-6 ${yearlyBudget && yearlySpent > yearlyBudget ? 'bg-danger' : 'bg-success'}`}
                   style={{ fontWeight: 500 }}>
-                  {totalYearlySpent > (yearlyBudget || 0) ? 'Over Budget' : 'On Track'}
+                  {yearlyBudget && yearlySpent > yearlyBudget ? 'Over Budget' : 'On Track'}
                 </span>
                 <div className="mt-2">
                   <small className="text-secondary">{currentYear}</small>
@@ -252,19 +218,19 @@ export default function BudgetPage() {
             <div className="card shadow-sm border-0 h-100">
               <div className="card-body text-center">
                 <h6 className="text-muted">Yearly Spent</h6>
-                <h2 className="fw-bold text-info">{currencySign(userCurrency)}{totalYearlySpent.toFixed(2)}</h2>
+                <h2 className="fw-bold text-info">{currencySign(userCurrency)}{yearlySpent.toFixed(2)}</h2>
                 <div className="progress mx-auto mt-2" style={{ height: '8px', width: '80%' }}>
                   <div
-                    className={`progress-bar ${totalYearlySpent > (yearlyBudget || 0) ? 'bg-danger' : totalYearlySpent > 0.9 * (yearlyBudget || 1) ? 'bg-warning' : 'bg-success'}`}
+                    className={`progress-bar ${yearlyBudget && yearlySpent > yearlyBudget ? 'bg-danger' : yearlyBudget && yearlySpent > 0.9 * yearlyBudget ? 'bg-warning' : 'bg-success'}`}
                     role="progressbar"
-                    style={{ width: yearlyBudget ? `${Math.min((totalYearlySpent / yearlyBudget) * 100, 100)}%` : '0%' }}
-                    aria-valuenow={yearlyBudget ? (totalYearlySpent / yearlyBudget) * 100 : 0}
+                    style={{ width: yearlyBudget ? `${Math.min((yearlySpent / yearlyBudget) * 100, 100)}%` : '0%' }}
+                    aria-valuenow={yearlyBudget ? (yearlySpent / yearlyBudget) * 100 : 0}
                     aria-valuemin="0"
                     aria-valuemax="100"
                   >
                   </div>
                 </div>
-                <small className="text-secondary">{yearlyBudget ? `${Math.min((totalYearlySpent / yearlyBudget) * 100, 100).toFixed(1)}% of yearly budget used` : '0% used'}</small>
+                <small className="text-secondary">{yearlyBudget ? `${Math.min((yearlySpent / yearlyBudget) * 100, 100).toFixed(1)}% of yearly budget used` : '0% used'}</small>
               </div>
             </div>
           </div>
@@ -336,25 +302,6 @@ export default function BudgetPage() {
                 {percentageUsed.toFixed(2)}%
               </div>
             </div>
-            <div className="chart-container col-md-5">
-              <Bar
-                data={chartData}
-                options={{
-                  responsive: true,
-                  plugins: {
-                    legend: {
-                      position: 'top',
-                    },
-                    title: {
-                      display: true,
-                      text: 'Monthly Budget vs Spending History',
-                    }
-                  }
-                }
-                }
-              />
-            </div>
-
           </div>
         </div>
       </div>
