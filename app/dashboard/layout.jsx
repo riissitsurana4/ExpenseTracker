@@ -26,16 +26,32 @@ export default async function DashboardLayout({ children, modal }) {
           <span className="navbar-brand fw-bold fs-4 text-primary">
             Smart Expense Hub
           </span>
-          <Link href="/dashboard" className="nav-link text-ternary">Overview</Link>
-          <Link href="/dashboard/expenses" className="nav-link text-ternary">Expenses</Link>
-          <Link href="/dashboard/budget" className="nav-link text-ternary">Budget</Link>
-          <Link href="/dashboard/categories" className="nav-link text-ternary">Categories</Link>
-          <div className="d-flex justify-content-end align-items-center w-70">
-            <Profile />
+          
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNavbar" aria-controls="dashboardNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          
+          <div className="collapse navbar-collapse" id="dashboardNavbar">
+            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+              <li className="nav-item">
+                <Link href="/dashboard" className="nav-link text-ternary">Overview</Link>
+              </li>
+              <li className="nav-item">
+                <Link href="/dashboard/expenses" className="nav-link text-ternary">Expenses</Link>
+              </li>
+              <li className="nav-item">
+                <Link href="/dashboard/budget" className="nav-link text-ternary">Budget</Link>
+              </li>
+              <li className="nav-item">
+                <Link href="/dashboard/categories" className="nav-link text-ternary">Categories</Link>
+              </li>
+            </ul>
+            <div className="d-flex justify-content-end align-items-center w-70">
+              <Profile />
+            </div>
           </div>
         </div>
       </header>
-
 
       <main style={{paddingTop: '4.5rem' }}>
         {children}

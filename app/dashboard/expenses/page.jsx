@@ -5,6 +5,10 @@ import '../../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../../components/BootstrapClient';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import Papa from 'papaparse';
+
 export default function Expenses() {
     const [expenses, setExpenses] = useState([]);
     const [date, setDate] = useState('');
@@ -279,22 +283,53 @@ export default function Expenses() {
       return month === currentMonth;
     })();
 
+    const exportExpensesToCSV = (data, filename = 'expenses.csv') => {
+      if (!data.length) return;
+      const csv = Papa.unparse(data);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    const exportExpensesToPDF = (data, filename = 'expenses.pdf') => {
+      if (!data.length) return;
+      const doc = new jsPDF();
+      const headers = [Object.keys(data[0])];
+      const rows = data.map(row => headers[0].map(field => row[field] ?? ''));
+      doc.text('Expenses', 14, 15);
+      doc.autoTable({
+        head: headers,
+        body: rows,
+        startY: 20,
+        styles: { fontSize: 8 }
+      });
+      doc.save(filename);
+    };
+
     return (
         <>
             <BootstrapClient />
             <div className="container-fluid">
-                <h1 className="text-center text-primary">Expenses</h1>
+                <h1 className="text-center text-primary mb-3" style={{ fontSize: 'clamp(1.2rem, 5vw, 2.2rem)' }}>Expenses</h1>
                 <div className="card mb-4 shadow-sm">
                     <div className="card-body py-3 px-2">
-                        <div className="row g-2 align-items-end">
-                            <div className="col-12 col-md-2">
+                        {/* Responsive filter row */}
+                        <div className="row g-2 align-items-end flex-wrap flex-md-nowrap">
+                            <div className="col-12 col-sm-6 col-md-2">
                                 <label className="form-label mb-1">Year</label>
                                 <select className="form-select" value={year} onChange={e => setYear(e.target.value)} aria-label="Select Year">
                                     <option value="">All</option>
                                     {years.map(y => (<option key={y} value={y}>{y}</option>))}
                                 </select>
                             </div>
-                            <div className="col-12 col-md-2">
+                            <div className="col-12 col-sm-6 col-md-2">
                                 <label className="form-label mb-1">Month</label>
                                 <select className="form-select" value={month} onChange={e => setMonth(e.target.value)} aria-label="Select Month" disabled={!year}>
                                     <option value="">All</option>
@@ -303,22 +338,43 @@ export default function Expenses() {
                                     ))}
                                 </select>
                             </div>
-                            <div className="col-12 col-md-2">
+                            <div className="col-12 col-sm-6 col-md-2">
                                 <label className="form-label mb-1">Start Date</label>
                                 <input type="date" className="form-control" value={startDate} onChange={e => setStartDate(e.target.value)} aria-label="Start Date" />
                             </div>
-                            <div className="col-12 col-md-2">
+                            <div className="col-12 col-sm-6 col-md-2">
                                 <label className="form-label mb-1">End Date</label>
                                 <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} aria-label="End Date" />
                             </div>
-                            <div className="col-12 col-md-auto ms-auto d-flex justify-content-end gap-2 mt-2 mt-md-0">
+                    
+                            <div className="col-12 col-md-auto ms-auto d-flex justify-content-end gap-2 mt-2 mt-md-0 align-items-end flex-wrap flex-md-nowrap">
+                               
+                                <button
+                                    className="btn btn-outline-success"
+                                    onClick={() => exportExpensesToCSV(sortedExpenses)}
+                                    title="Export as CSV"
+                                >
+                                    <i className="bi bi-file-earmark-spreadsheet me-1"></i> CSV
+                                </button>
+                               
+                                <button
+                                    className="btn btn-outline-danger"
+                                    onClick={() => exportExpensesToPDF(sortedExpenses)}
+                                    title="Export as PDF"
+                                >
+                                    <i className="bi bi-file-earmark-pdf me-1"></i> PDF
+                                </button>
+                               
                                 {(
                                     (year || date || startDate || endDate || filterCategory || filterSubcategory || filterAmountMin || filterAmountMax || filterModeOfPayment || filterRecurring) ||
                                     (month && !isCurrentMonth)
                                 ) && (
-                                    <button className="btn btn-outline-secondary" onClick={() => { setYear(''); setMonth(''); setDate(''); setStartDate(''); setEndDate(''); setFilterCategory(''); setFilterSubcategory(''); setFilterAmountMin(''); setFilterAmountMax(''); setFilterModeOfPayment(''); setFilterRecurring(''); }}>Clear Filters</button>
+                                    <button className="btn btn-outline-secondary btn-sm" onClick={() => { setYear(''); setMonth(''); setDate(''); setStartDate(''); setEndDate(''); setFilterCategory(''); setFilterSubcategory(''); setFilterAmountMin(''); setFilterAmountMax(''); setFilterModeOfPayment(''); setFilterRecurring(''); }}>
+                                        Clear Filters
+                                    </button>
                                 )}
-                                <button className="btn btn-primary" onClick={() => openModal()}>
+                                {/* Add Expense */}
+                                <button className="btn btn-primary btn-sm" onClick={() => openModal()}>
                                     <i className="bi bi-plus-lg me-1"></i> Add Expense
                                 </button>
                             </div>
