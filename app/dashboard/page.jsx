@@ -8,6 +8,7 @@ import '../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../components/BootstrapClient';
 import { presetcategories } from '../../components/presets.jsx'
 import { AreaChartIcon } from 'lucide-react';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 export default function Dashboard() {
 	const [expenses, setExpenses] = useState([]);
@@ -109,7 +110,6 @@ export default function Dashboard() {
 						category_id: insertedCategory.id,
 						user_id: user.id
 					}));
-
 					const { data: subcatData, error: subcatError, status, statusText } = await supabase
 						.from("subcategories")
 						.upsert(
@@ -169,7 +169,7 @@ export default function Dashboard() {
 						.select('name')
 						.eq('category_id', categoryId);
 					setSubcategories(data || []);
-					if (!editExpense) setSubcategory(""); // <-- only reset on add, not edit
+					if (!editExpense) setSubcategory("");
 				};
 				fetchSubcategories(selectedCategory.id);
 			}
@@ -183,8 +183,8 @@ export default function Dashboard() {
 		const today = new Date().toISOString().slice(0, 10);
 		const thisMonth = new Date().toISOString().slice(0, 7);
 		const now = new Date();
-		const cyStart = new Date(now.getFullYear(), 0, 1); // Jan 1st
-		const cyEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999); // Dec 31st
+		const cyStart = new Date(now.getFullYear(), 0, 1);
+		const cyEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
 		const result = expensesData.reduce(
 			(acc, curr) => {
 				const date = curr.created_at.slice(0, 10);
@@ -352,7 +352,9 @@ export default function Dashboard() {
 					</div>
 					<div className="card col-sm-3 border-0">
 						<h2 className="text-primary">Add New Expense</h2>
-						<button className="btn btn-primary" onClick={() => openModal()}>Add Expense</button>
+						<button className="btn btn-primary" onClick={openModal}>
+							<i className="bi bi-plus"></i> Add Expense
+						</button>
 					</div>
 				</div>
 
@@ -364,20 +366,24 @@ export default function Dashboard() {
 								<div className="alert alert-info text-center">No expenses yet.</div>
 							</div>
 						) : (
-							expenses.slice(0, 7).map((exp) => (
-								<div key={exp.id} className="col-md-6 mb-3">
-									<div className="card h-100">
-										<div className="card-body">
+							expenses.slice(0, 8).map((exp) => (
+								<div key={exp.id} className="col-md-3 mb-2">
+									<div className="card h-55">
+										<div className="card-body position-relative">
+											<div className="position-absolute top-0 end-0 mt-2 me-2 d-flex gap-2">
+												<button className="btn btn-outline-primary btn-sm" onClick={() => openModal(exp)} title="Edit">
+													<i className="bi bi-pencil"></i>
+												</button>
+												<button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(exp.id)} title="Delete">
+													<i className="bi bi-trash"></i>
+												</button>
+											</div>
 											<h5 className="card-title">{exp.title}</h5>
 											<p className="card-text expense-info">
 												{currencySign(userCurrency)}{Number(exp.amount).toFixed(2)}
 												<span className="badge bg-secondary ms-2">{exp.category}</span>
 											</p>
 											<p className="card-text text-truncate" style={{ maxWidth: 120 }}>{exp.description}</p>
-											<div className="d-flex gap-2 mt-3">
-												<button className="btn btn-outline-primary btn-sm" onClick={() => openModal(exp)}>Edit</button>
-												<button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(exp.id)}>Delete</button>
-											</div>
 										</div>
 									</div>
 								</div>
@@ -595,8 +601,8 @@ export default function Dashboard() {
 							<div className="card shadow-sm">
 								<div className="card-body">
 									<h5 className="card-title text-primary">Savings Over Time</h5>
-										
-									
+
+
 								</div>
 							</div>
 						</div>

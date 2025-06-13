@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../../utils/supabase/client';
 import '../../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../../components/BootstrapClient';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 export default function Expenses() {
     const [expenses, setExpenses] = useState([]);
@@ -22,13 +23,60 @@ export default function Expenses() {
     const [createdAt, setCreatedAt] = useState('');
     const [categories, setCategories] = useState([]);
     const [subcategories, setSubcategories] = useState([]);
+    const [allSubcategories, setAllSubcategories] = useState([]);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [filterCategory, setFilterCategory] = useState('');
+    const [filterSubcategory, setFilterSubcategory] = useState('');
+    const [filterAmountMin, setFilterAmountMin] = useState('');
+    const [filterAmountMax, setFilterAmountMax] = useState('');
+    const [filterModeOfPayment, setFilterModeOfPayment] = useState('');
+    const [filterRecurring, setFilterRecurring] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
     const [userCurrency, setUserCurrency] = useState('INR');
     const [modeOfPayment, setModeOfPayment] = useState('');
+    const [sortColumn, setSortColumn] = useState('');
+    const [sortDirection, setSortDirection] = useState('asc');
+
+    const handleSort = (column) => {
+        if (sortColumn === column) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
+        }
+    };
+
+    const filtered = useMemo(() => {
+        let filteredData = expenses;
+        if (year) filteredData = filteredData.filter(exp => exp.created_at.slice(0, 4) === year);
+        if (month) filteredData = filteredData.filter(exp => exp.created_at.slice(0, 7) === month);
+        if (date) filteredData = filteredData.filter(exp => exp.created_at.slice(0, 10) === date);
+        if (startDate) filteredData = filteredData.filter(exp => new Date(exp.created_at) >= new Date(startDate));
+        if (endDate) filteredData = filteredData.filter(exp => new Date(exp.created_at) <= new Date(endDate));
+        if (filterCategory) filteredData = filteredData.filter(exp => exp.category === filterCategory);
+        if (filterSubcategory) filteredData = filteredData.filter(exp => exp.subcategory === filterSubcategory);
+        if (filterAmountMin) filteredData = filteredData.filter(exp => parseFloat(exp.amount) >= parseFloat(filterAmountMin));
+        if (filterAmountMax) filteredData = filteredData.filter(exp => parseFloat(exp.amount) <= parseFloat(filterAmountMax));
+        if (filterModeOfPayment) filteredData = filteredData.filter(exp => exp.mode_of_payment === filterModeOfPayment);
+        if (filterRecurring) {
+            if (filterRecurring === 'yes') filteredData = filteredData.filter(exp => exp.is_recurring);
+            else if (filterRecurring === 'no') filteredData = filteredData.filter(exp => !exp.is_recurring);
+        }
+        return filteredData;
+    }, [expenses, date, month, year, startDate, endDate, filterCategory, filterSubcategory, filterAmountMin, filterAmountMax, filterModeOfPayment, filterRecurring]);
+
+    const sortedExpenses = useMemo(() => {
+        let sorted = [...filtered];
+        if (sortColumn) {
+            sorted.sort((a, b) => {
+                if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
+                if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return sorted;
+    }, [filtered, sortColumn, sortDirection]);
 
     useEffect(() => {
         const fetchCurrency = async () => {
@@ -61,7 +109,7 @@ export default function Expenses() {
             setSubcategory(expense.subcategory || "");
             setDescription(expense.description || "");
             setCreatedAt(expense.created_at ? expense.created_at.slice(0, 10) : '');
-            setModeOfPayment(expense.mode_of_payment || ""); // <-- fix: load mode of payment
+            setModeOfPayment(expense.mode_of_payment || ""); 
         } else {
             setTitle('');
             setAmount('');
@@ -69,7 +117,7 @@ export default function Expenses() {
             setSubcategory("");
             setDescription("");
             setCreatedAt(new Date().toISOString().slice(0, 10));
-            setModeOfPayment(""); // <-- reset on add
+            setModeOfPayment("");
         }
         setShowModal(true);
     };
@@ -89,7 +137,7 @@ export default function Expenses() {
             alert('Please enter a valid title and amount.');
             return;
         }
-        // Ensure amount always has two decimals
+      
         const formattedAmount = parseFloat(parseFloat(amount).toFixed(2));
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -121,7 +169,7 @@ export default function Expenses() {
             return;
         }
         closeModal();
-        // Refresh expenses
+       
         const { data, error } = await supabase
             .from('expenses')
             .select('*')
@@ -156,33 +204,11 @@ export default function Expenses() {
         fetchExpesnes();
     }, []);
 
-    const filtered = useMemo(() => {
-        let filteredData = expenses;
-        if (year) filteredData = filteredData.filter(exp => exp.created_at.slice(0, 4) === year);
-        if (month) filteredData = filteredData.filter(exp => exp.created_at.slice(0, 7) === month);
-        if (date) filteredData = filteredData.filter(exp => exp.created_at.slice(0, 10) === date);
-        if (startDate) filteredData = filteredData.filter(exp => new Date(exp.created_at) >= new Date(startDate));
-        if (endDate) filteredData = filteredData.filter(exp => new Date(exp.created_at) <= new Date(endDate));
-        if (filterCategory) filteredData = filteredData.filter(exp => exp.category === filterCategory);
-        return filteredData;
-    }, [expenses, date, month, year, startDate, endDate, filterCategory]);
-
-    const paginated = useMemo(() => {
-        const start = (currentPage - 1) * itemsPerPage;
-        return filtered.slice(start, start + itemsPerPage);
-    }, [filtered, currentPage]);
-
-    const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-    useEffect(() => {
-        setMonth('');
-    }, [year]);
-
     const years = Array.from(new Set(expenses.map(exp => exp.created_at.slice(0, 4)))).sort((a, b) => b - a);
     const months = Array.from(new Set(expenses.map(exp => exp.created_at.slice(0, 7)))).sort((a, b) => b.localeCompare(a));
     const uniqueDates = Array.from(new Set(expenses.map(exp => exp.created_at.slice(0, 10))));
 
-    // Fetch categories and subcategories from Supabase
+   
     useEffect(() => {
         const fetchCategories = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -197,25 +223,61 @@ export default function Expenses() {
         fetchCategories();
     }, []);
 
+
     useEffect(() => {
-        if (category) {
-            const selectedCategory = categories.find(cat => cat.name === category);
+        const fetchAllSubcategories = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const { data } = await supabase
+                .from('subcategories')
+                .select('name, category_id');
+            setAllSubcategories(data || []);
+        };
+        fetchAllSubcategories();
+    }, []);
+
+
+    const filteredSubcategories = useMemo(() => {
+        if (!category) return [];
+        const selectedCategory = categories.find(cat => cat.name === category);
+        if (selectedCategory) {
+            return allSubcategories.filter(sub => sub.category_id === selectedCategory.id);
+        }
+        return [];
+    }, [category, allSubcategories, categories]);
+
+
+    const [filterSubcategories, setFilterSubcategories] = useState([]);
+    useEffect(() => {
+        if (filterCategory) {
+            const selectedCategory = categories.find(cat => cat.name === filterCategory);
             if (selectedCategory) {
                 const fetchSubcategories = async (categoryId) => {
                     const { data } = await supabase
                         .from('subcategories')
                         .select('name')
                         .eq('category_id', categoryId);
-                    setSubcategories(data || []);
-                    if (!editExpense) setSubcategory("");
+                    setFilterSubcategories(data || []);
                 };
                 fetchSubcategories(selectedCategory.id);
             }
         } else {
-            setSubcategories([]);
-            setSubcategory("");
+            setFilterSubcategories([]);
+            setFilterSubcategory("");
         }
-    }, [category, categories]);
+    }, [filterCategory, categories]);
+
+    useEffect(() => {
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        setMonth(currentMonth);
+    }, []);
+
+    const isCurrentMonth = (() => {
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      return month === currentMonth;
+    })();
 
     return (
         <>
@@ -242,10 +304,6 @@ export default function Expenses() {
                                 </select>
                             </div>
                             <div className="col-12 col-md-2">
-                                <label className="form-label mb-1">Date</label>
-                                <input type="date" className="form-control" value={date} onChange={e => { setDate(e.target.value); setMonth(''); setYear(''); }} aria-label="Select Date" />
-                            </div>
-                            <div className="col-12 col-md-2">
                                 <label className="form-label mb-1">Start Date</label>
                                 <input type="date" className="form-control" value={startDate} onChange={e => setStartDate(e.target.value)} aria-label="Start Date" />
                             </div>
@@ -253,18 +311,16 @@ export default function Expenses() {
                                 <label className="form-label mb-1">End Date</label>
                                 <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} aria-label="End Date" />
                             </div>
-                            <div className="col-12 col-md-2">
-                                <label className="form-label mb-1">Category</label>
-                                <select className="form-select" value={filterCategory} onChange={e => setFilterCategory(e.target.value)} aria-label="Select Category">
-                                    <option value="">All</option>
-                                    {categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
-                                </select>
-                            </div>
                             <div className="col-12 col-md-auto ms-auto d-flex justify-content-end gap-2 mt-2 mt-md-0">
-                                {(year || month || date || startDate || endDate || filterCategory) && (
-                                    <button className="btn btn-outline-secondary" onClick={() => { setYear(''); setMonth(''); setDate(''); setStartDate(''); setEndDate(''); setFilterCategory(''); }}>Clear Filters</button>
+                                {(
+                                    (year || date || startDate || endDate || filterCategory || filterSubcategory || filterAmountMin || filterAmountMax || filterModeOfPayment || filterRecurring) ||
+                                    (month && !isCurrentMonth)
+                                ) && (
+                                    <button className="btn btn-outline-secondary" onClick={() => { setYear(''); setMonth(''); setDate(''); setStartDate(''); setEndDate(''); setFilterCategory(''); setFilterSubcategory(''); setFilterAmountMin(''); setFilterAmountMax(''); setFilterModeOfPayment(''); setFilterRecurring(''); }}>Clear Filters</button>
                                 )}
-                                <button className="btn btn-primary" onClick={() => openModal()}>Add Expense</button>
+                                <button className="btn btn-primary" onClick={() => openModal()}>
+                                    <i className="bi bi-plus-lg me-1"></i> Add Expense
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -288,19 +344,64 @@ export default function Expenses() {
                                         <table className="table table-striped table-hover table-bordered align-middle mb-0" style={{ width: '100%' }}>
                                             <thead className="table-light">
                                                 <tr>
-                                                    <th style={{ width: '18%' }}>Date</th>
-                                                    <th style={{ width: '18%' }}>Category</th>
-                                                    <th className="d-none d-md-table-cell" style={{ width: '16%' }}>Subcategory</th>
-                                                    <th className="d-none d-sm-table-cell" style={{ width: '16%' }}>Description</th>
-                                                    <th className="text-center" style={{ width: '14%' }}>Amount</th>
-                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '10%' }}>Recurring</th>
-                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '18%' }}>Mode of Payment</th>
-                                                    <th className="text-center" style={{ width: '12%' }}>Actions</th>
+                                                    <th style={{ width: '18%' }} onClick={() => handleSort('created_at')}>Date</th>
+                                                    <th style={{ width: '18%' }} onClick={() => handleSort('category')}>Category</th>
+                                                    <th className="d-none d-md-table-cell" style={{ width: '16%' }} onClick={() => handleSort('subcategory')}>Subcategory</th>
+                                                    <th className="d-none d-sm-table-cell" style={{ width: '16%' }} onClick={() => handleSort('description')}>Description</th>
+                                                    <th className="text-center" style={{ width: '14%' }} onClick={() => handleSort('amount')}>Amount</th>
+                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '10%' }} onClick={() => handleSort('is_recurring')}>Recurring</th>
+                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '18%' }} onClick={() => handleSort('mode_of_payment')}>Mode of Payment</th>
+                                                    <th className="text-center" style={{ width: '12%' }} >Actions</th>
+                                                </tr>
+                                                <tr>
+                                                    <th>
+                                                        <input type="date" className="form-control form-control-sm" value={date} onChange={e => setDate(e.target.value)} />
+                                                    </th>
+                                                    <th>
+                                                        <select className="form-select form-select-sm" value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setFilterSubcategory(''); }}>
+                                                            <option value="">All</option>
+                                                            {categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
+                                                        </select>
+                                                    </th>
+                                                    <th className="d-none d-md-table-cell">
+                                                        <select className="form-select form-select-sm" value={filterSubcategory} onChange={e => setFilterSubcategory(e.target.value)} disabled={!filterCategory}>
+                                                            <option value="">All</option>
+                                                            {filterSubcategory && filterCategory && filterSubcategories.map(sub => (
+                                                                <option key={sub.name} value={sub.name}>{sub.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </th>
+                                                    <th className="d-none d-sm-table-cell"></th>
+                                                    <th>
+                                                        <div className="d-flex gap-1">
+                                                            <input type="number" className="form-control form-control-sm" placeholder="Min" value={filterAmountMin} onChange={e => setFilterAmountMin(e.target.value)} style={{ width: 60 }} />
+                                                            <input type="number" className="form-control form-control-sm" placeholder="Max" value={filterAmountMax} onChange={e => setFilterAmountMax(e.target.value)} style={{ width: 60 }} />
+                                                        </div>
+                                                    </th>
+                                                    <th className="d-none d-sm-table-cell">
+                                                        <select className="form-select form-select-sm" value={filterRecurring} onChange={e => setFilterRecurring(e.target.value)}>
+                                                            <option value="">All</option>
+                                                            <option value="yes">Yes</option>
+                                                            <option value="no">No</option>
+                                                        </select>
+                                                    </th>
+                                                    <th className="d-none d-sm-table-cell">
+                                                        <select className="form-select form-select-sm" value={filterModeOfPayment} onChange={e => setFilterModeOfPayment(e.target.value)}>
+                                                            <option value="">All</option>
+                                                            <option value="cash">Cash</option>
+                                                            <option value="credit_card">Credit Card</option>
+                                                            <option value="debit_card">Debit Card</option>
+                                                            <option value="upi">UPI</option>
+                                                            <option value="net_banking">Net Banking</option>
+                                                            <option value="wallet">Wallet</option>
+                                                        </select>
+                                                    </th>
+                                                    <th></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {paginated.length > 0 ? (
-                                                    paginated.map((expense) => (
+                                                {sortedExpenses.length > 0 ? (
+                                                    sortedExpenses.map((expense) => (
                                                         <tr key={expense.id}>
                                                             <td style={{ wordBreak: 'break-word' }}>{expense.created_at.slice(0, 10)}</td>
                                                             <td style={{ wordBreak: 'break-word' }}>{expense.category}</td>
@@ -325,8 +426,12 @@ export default function Expenses() {
                                                                 }
                                                             </td>
                                                             <td className="text-center" style={{ wordBreak: 'break-word', minWidth: 120 }}>
-                                                                <button className="btn btn-outline-primary btn-sm me-2" onClick={() => openModal(expense)}>Edit</button>
-                                                                <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(expense.id)}>Delete</button>
+                                                                <button className="btn btn-outline-primary btn-sm me-2" onClick={() => openModal(expense)} title="Edit">
+                                                                    <i className="bi bi-pencil"></i>
+                                                                </button>
+                                                                <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(expense.id)} title="Delete">
+                                                                    <i className="bi bi-trash"></i>
+                                                                </button>
                                                             </td>
                                                         </tr>
                                                     ))
@@ -345,24 +450,6 @@ export default function Expenses() {
                         </div>
                     </div>
                 </div>
-
-                {totalPages > 1 && (
-                    <nav className="mt-3">
-                        <ul className="pagination justify-content-center">
-                            <li className={`page-item${currentPage === 1 ? ' disabled' : ''}`}>
-                                <button className="page-link" onClick={() => setCurrentPage(currentPage - 1)}>Previous</button>
-                            </li>
-                            {[...Array(totalPages)].map((_, idx) => (
-                                <li key={idx} className={`page-item${currentPage === idx + 1 ? ' active' : ''}`}>
-                                    <button className="page-link" onClick={() => setCurrentPage(idx + 1)}>{idx + 1}</button>
-                                </li>
-                            ))}
-                            <li className={`page-item${currentPage === totalPages ? ' disabled' : ''}`}>
-                                <button className="page-link" onClick={() => setCurrentPage(currentPage + 1)}>Next</button>
-                            </li>
-                        </ul>
-                    </nav>
-                )}
 
                 {showModal && (
                     <>
@@ -388,19 +475,7 @@ export default function Expenses() {
                                                 type="number"
                                                 placeholder="Amount"
                                                 value={amount}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === "") {
-                                                        setAmount("");
-                                                    } else {
-                                                        const num = parseFloat(val);
-                                                        if (!isNaN(num)) {
-                                                            setAmount(num.toFixed(2));
-                                                        } else {
-                                                            setAmount(val);
-                                                        }
-                                                    }
-                                                }}
+                                                onChange={(e) => setAmount(e.target.value)}
                                                 required
                                                 className="form-control mb-2"
                                             />
@@ -420,17 +495,19 @@ export default function Expenses() {
                                                 onChange={(e) => setSubcategory(e.target.value)}
                                                 required
                                                 className="form-select mb-2 subcategory-select"
-                                                disabled={!category || subcategories.length === 0}
+                                                disabled={!category || !categories.find(c => c.name === category)}
                                             >
-                                                {subcategories.length === 0 ? (
-                                                    <option value="" disabled>No subcategories available</option>
-                                                ) : (
+                                                {category && categories.find(c => c.name === category) ? (
                                                     <>
-                                                        <option value={""}>Select Subcategory</option>
-                                                        {subcategories.map(sub => (
-                                                            <option key={sub.name} value={sub.name}>{sub.name}</option>
-                                                        ))}
+                                                        <option value="">Select Subcategory</option>
+                                                        {allSubcategories
+                                                            .filter(sub => sub.category_id === categories.find(c => c.name === category).id)
+                                                            .map(sub => (
+                                                                <option key={sub.name} value={sub.name}>{sub.name}</option>
+                                                            ))}
                                                     </>
+                                                ) : (
+                                                    <option value="" disabled>No subcategories available</option>
                                                 )}
                                             </select>
                                             <input
