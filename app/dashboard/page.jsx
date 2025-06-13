@@ -34,6 +34,7 @@ export default function Dashboard() {
 	const [topCategories, setTopCategories] = useState([]);
 	const [paymentMethodData, setPaymentMethodData] = useState([]);
 	const [recurringData, setRecurringData] = useState([]);
+	const [allSubcategories, setAllSubcategories] = useState([]);
 
 	useEffect(() => {
 		const fetchCurrency = async () => {
@@ -332,6 +333,18 @@ export default function Dashboard() {
 		await supabase.from('expenses').delete().eq('id', id); ``
 		fetchExpenses();
 	};
+
+	useEffect(() => {
+		const fetchAllSubcategories = async () => {
+			const { data: { user } } = await supabase.auth.getUser();
+			if (!user) return;
+			const { data } = await supabase
+				.from('subcategories')
+				.select('name, category_id');
+			setAllSubcategories(data || []);
+		};
+		fetchAllSubcategories();
+	}, []);
 
 	return (
 		<>
@@ -700,12 +713,8 @@ export default function Dashboard() {
                                                 <label className="form-label">Recurring</label>
                                                 <select
                                                     className="form-select"
-                                                    value={editExpense?.recurring_type || ''}
-                                                    onChange={e => {
-                                                        if (editExpense) {
-                                                            setEditExpense({ ...editExpense, recurring_type: e.target.value });
-                                                        }
-                                                    }}
+                                                    value={recurringType}
+                                                    onChange={e => setRecurringType(e.target.value)}
                                                 >
                                                     <option value="">No</option>
                                                     <option value="weekly">Weekly</option>
