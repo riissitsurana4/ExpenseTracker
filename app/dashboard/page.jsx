@@ -610,115 +610,120 @@ export default function Dashboard() {
 				</div>
 
 				{/* Modal for adding/editing expenses */}
-				{showModal && (
-					<>
-						<div className="modal-backdrop fade show" style={{ zIndex: 1040, position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)' }}></div>
-						<div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 1050, display: 'block', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', minWidth: 350, maxWidth: '95vw' }}>
-							<div className="modal-dialog">
-								<div className="modal-content">
-									<div className="modal-header">
-										<h3 className="modal-title" id="addExpenseModalLabel">{editExpense ? 'Edit Expense' : 'Add Expense'}</h3>
-										<button type="button" className="btn-close" onClick={closeModal} aria-label="Close"></button>
-									</div>
-									<div className="modal-body">
-										<form onSubmit={handleSubmit}>
-											<input
-												type="text"
-												placeholder="Title"
-												value={title}
-												onChange={(e) => setTitle(e.target.value)}
-												required
-												className="form-control mb-2"
-											/>
-											<input
-												type="number"
-												placeholder="Amount"
-												value={amount}
-												onChange={(e) => setAmount(e.target.value)}
-												required
-												className="form-control mb-2"
-											/>
-											<select
-												value={category}
-												onChange={(e) => setCategory(e.target.value)}
-												required
-												className="form-select mb-2 category-select"
-											>
-												<option value="">Select Category</option>
-												{categories.map(category => (
-													<option key={category.id} value={category.name}>{category.name}</option>
-												))}
-											</select>
-											<select
-												value={subcategory}
-												onChange={(e) => setSubcategory(e.target.value)}
-												required
-												className="form-select mb-2 subcategory-select"
-												disabled={!category || subcategories.length === 0}
-											>
-												{subcategories.length === 0 ? (
-													<option value="" disabled>No subcategories available</option>
-												) : (
-													<>
-														<option value={""}>Select Subcategory</option>
-														{subcategories.map(sub => (
-															<option key={sub.name} value={sub.name}>{sub.name}</option>
-
-														))}
-													</>)}
-											</select>
-											<input
-												type="date"
-												className="form-control mb-2"
-												value={createdAt}
-												onChange={e => setCreatedAt(e.target.value)}
-												aria-label="Select Date"
-											/>
-											<input
-												type="text"
-												placeholder="Description (optional)"
-												value={description}
-												onChange={e => setDescription(e.target.value)}
-												className="form-control mb-2"
-											/>
-											<select
-												value={modeOfPayment}
-												onChange={e => setModeOfPayment(e.target.value)}
-												required
-												className="form-select mb-2">
-												<option value="">Select Mode of Payment</option>
-												<option value="cash">Cash</option>
-												<option value="credit_card">Credit Card</option>
-												<option value="debit_card">Debit Card</option>
-												<option value="upi">UPI</option>
-												<option value="net_banking">Net Banking</option>
-												<option value="wallet">Wallet</option>
-											</select>
-											<div className="mb-2">
-												<label className="form-label">Recurring</label>
-												<select
-													className="form-select"
-													value={recurringType}
-													onChange={e => setRecurringType(e.target.value)}
-												>
-													<option value="">No</option>
-													<option value="weekly">Weekly</option>
-													<option value="monthly">Monthly</option>
-													<option value="yearly">Yearly</option>
-												</select>
-											</div>
-
-											<div className="modal-actions d-flex justify-content-between">
-												<button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
-												<button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-											</div>
-										</form>
-									</div>
-								</div>
-							</div>
-						</div>
-					</>
-				)}
+				 {showModal && (
+                    <>
+                        <div className="modal-backdrop fade show" style={{ zIndex: 1040, position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)' }}></div>
+                        <div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 1050, display: 'block', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', minWidth: 350, maxWidth: '95vw' }}>
+                            <div className="modal-dialog">
+                                <div className="modal-content">
+                                    <div className="modal-header">
+                                        <h3 className="modal-title" id="addExpenseModalLabel">{editExpense ? 'Edit Expense' : 'Add Expense'}</h3>
+                                        <button type="button" className="btn-close" onClick={closeModal} aria-label="Close"></button>
+                                    </div>
+                                    <div className="modal-body">
+                                        <form onSubmit={handleSubmit}>
+                                            <input
+                                                type="text"
+                                                placeholder="Title"
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                                required
+                                                className="form-control mb-2"
+                                            />
+                                            <input
+                                                type="number"
+                                                placeholder="Amount"
+                                                value={amount}
+                                                onChange={(e) => setAmount(e.target.value)}
+                                                required
+                                                className="form-control mb-2"
+                                            />
+                                            <select
+                                                value={category}
+                                                onChange={(e) => setCategory(e.target.value)}
+                                                required
+                                                className="form-select mb-2 category-select"
+                                            >
+                                                <option value="">Select Category</option>
+                                                {categories.map(category => (
+                                                    <option key={category.id} value={category.name}>{category.name}</option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                value={subcategory}
+                                                onChange={(e) => setSubcategory(e.target.value)}
+                                                required
+                                                className="form-select mb-2 subcategory-select"
+                                                disabled={!category || !categories.find(c => c.name === category)}
+                                            >
+                                                {category && categories.find(c => c.name === category) ? (
+                                                    <>
+                                                        <option value="">Select Subcategory</option>
+                                                        {allSubcategories
+                                                            .filter(sub => sub.category_id === categories.find(c => c.name === category).id)
+                                                            .map(sub => (
+                                                                <option key={sub.name} value={sub.name}>{sub.name}</option>
+                                                            ))}
+                                                    </>
+                                                ) : (
+                                                    <option value="" disabled>No subcategories available</option>
+                                                )}
+                                            </select>
+                                            <input
+                                                type="date"
+                                                className="form-control mb-2"
+                                                value={createdAt}
+                                                onChange={e => setCreatedAt(e.target.value)}
+                                                aria-label="Select Date"
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Description (optional)"
+                                                value={description}
+                                                onChange={e => setDescription(e.target.value)}
+                                                className="form-control mb-2"
+                                            />
+                                            <select
+                                                value={modeOfPayment}
+                                                onChange={e => setModeOfPayment(e.target.value)}
+                                                required
+                                                className="form-select mb-2">
+                                                <option value="">Select Mode of Payment</option>
+                                                <option value="cash">Cash</option>
+                                                <option value="credit_card">Credit Card</option>
+                                                <option value="debit_card">Debit Card</option>
+                                                <option value="upi">UPI</option>
+                                                <option value="net_banking">Net Banking</option>
+                                                <option value="wallet">Wallet</option>
+                                            </select>
+                                            <div className="mb-2">
+                                                <label className="form-label">Recurring</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={editExpense?.recurring_type || ''}
+                                                    onChange={e => {
+                                                        if (editExpense) {
+                                                            setEditExpense({ ...editExpense, recurring_type: e.target.value });
+                                                        }
+                                                    }}
+                                                >
+                                                    <option value="">No</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="monthly">Monthly</option>
+                                                    <option value="yearly">Yearly</option>
+                                                </select>
+                                            </div>
+                                            <div className="modal-actions d-flex justify-content-between">
+                                                <button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
+                                                <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
 			</div>
 
 		</>
