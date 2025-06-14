@@ -45,6 +45,9 @@ export default async function DashboardLayout({ children, modal }) {
               <li className="nav-item">
                 <Link href="/dashboard/categories" className="nav-link text-ternary">Categories</Link>
               </li>
+              <li className="nav-item">
+                <Link href="/dashboard/analytics" className="nav-link text-ternary">Analytics</Link>
+              </li>
             </ul>
             <div className="d-flex justify-content-end align-items-center w-70">
               <Profile />
