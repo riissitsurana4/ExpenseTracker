@@ -1,10 +1,9 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '../../../utils/supabase/client';
 import '../../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../../components/BootstrapClient';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -313,6 +312,35 @@ export default function Expenses() {
       doc.save(filename);
     };
 
+    const useDropdown = () => {
+      const [open, setOpen] = useState(false);
+      const ref = useRef();
+      useEffect(() => {
+        const handleClick = (e) => {
+          if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+      }, []);
+      return [open, setOpen, ref];
+    };
+
+    function FilterDropdown({ children }) {
+      const [open, setOpen, ref] = useDropdown();
+      return (
+        <span ref={ref} style={{ position: 'relative', marginLeft: 4 }}>
+          <button type="button" className="btn btn-link p-0" onClick={e => { e.stopPropagation(); setOpen(o => !o); }}>
+            <i className="bi bi-funnel"></i>
+          </button>
+          {open && (
+            <div style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #ccc', borderRadius: 4, padding: 8, minWidth: 120, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+              {children}
+            </div>
+          )}
+        </span>
+      );
+    }
+
     return (
         <>
             <BootstrapClient />
@@ -320,7 +348,6 @@ export default function Expenses() {
                 <h1 className="text-center text-primary mb-3" style={{ fontSize: 'clamp(1.2rem, 5vw, 2.2rem)' }}>Expenses</h1>
                 <div className="card mb-4 shadow-sm">
                     <div className="card-body py-3 px-2">
-                        {/* Responsive filter row */}
                         <div className="row g-2 align-items-end flex-wrap flex-md-nowrap">
                             <div className="col-12 col-sm-6 col-md-2">
                                 <label className="form-label mb-1">Year</label>
@@ -373,7 +400,6 @@ export default function Expenses() {
                                         Clear Filters
                                     </button>
                                 )}
-                                {/* Add Expense */}
                                 <button className="btn btn-primary btn-sm" onClick={() => openModal()}>
                                     <i className="bi bi-plus-lg me-1"></i> Add Expense
                                 </button>
@@ -400,60 +426,72 @@ export default function Expenses() {
                                         <table className="table table-striped table-hover table-bordered align-middle mb-0" style={{ width: '100%' }}>
                                             <thead className="table-light">
                                                 <tr>
-                                                    <th style={{ width: '18%' }} onClick={() => handleSort('created_at')}>Date</th>
-                                                    <th style={{ width: '18%' }} onClick={() => handleSort('category')}>Category</th>
-                                                    <th className="d-none d-md-table-cell" style={{ width: '16%' }} onClick={() => handleSort('subcategory')}>Subcategory</th>
-                                                    <th className="d-none d-sm-table-cell" style={{ width: '16%' }} onClick={() => handleSort('description')}>Description</th>
-                                                    <th className="text-center" style={{ width: '14%' }} onClick={() => handleSort('amount')}>Amount</th>
-                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '10%' }} onClick={() => handleSort('is_recurring')}>Recurring</th>
-                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '18%' }} onClick={() => handleSort('mode_of_payment')}>Mode of Payment</th>
-                                                    <th className="text-center" style={{ width: '12%' }} >Actions</th>
-                                                </tr>
-                                                <tr>
-                                                    <th>
+                                                    <th style={{ width: '18%' }}>
+                                                      Date
+                                                      <FilterDropdown>
                                                         <input type="date" className="form-control form-control-sm" value={date} onChange={e => setDate(e.target.value)} />
+                                                      </FilterDropdown>
                                                     </th>
-                                                    <th>
+                                                    <th style={{ width: '18%' }}>
+                                                      Category
+                                                      <FilterDropdown>
                                                         <select className="form-select form-select-sm" value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setFilterSubcategory(''); }}>
-                                                            <option value="">All</option>
-                                                            {categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
+                                                          <option value="">All</option>
+                                                          {categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
                                                         </select>
+                                                      </FilterDropdown>
                                                     </th>
-                                                    <th className="d-none d-md-table-cell">
+                                                    <th className="d-none d-md-table-cell" style={{ width: '16%' }}>
+                                                      Subcategory
+                                                      <FilterDropdown>
                                                         <select className="form-select form-select-sm" value={filterSubcategory} onChange={e => setFilterSubcategory(e.target.value)} disabled={!filterCategory}>
-                                                            <option value="">All</option>
-                                                            {filterSubcategory && filterCategory && filterSubcategories.map(sub => (
-                                                                <option key={sub.name} value={sub.name}>{sub.name}</option>
-                                                            ))}
+                                                          <option value="">All</option>
+                                                          {filterSubcategory && filterCategory && filterSubcategories.map(sub => (
+                                                            <option key={sub.name} value={sub.name}>{sub.name}</option>
+                                                          ))}
                                                         </select>
+                                                      </FilterDropdown>
                                                     </th>
-                                                    <th className="d-none d-sm-table-cell"></th>
-                                                    <th>
+                                                    <th className="d-none d-sm-table-cell" style={{ width: '7%' }}>
+                                                      Description
+                                                    </th>
+                                                    <th className="text-center" style={{ width: '10%' }}>
+                                                      Amount
+                                                      <FilterDropdown>
                                                         <div className="d-flex gap-1">
-                                                            <input type="number" className="form-control form-control-sm" placeholder="Min" value={filterAmountMin} onChange={e => setFilterAmountMin(e.target.value)} style={{ width: 60 }} />
-                                                            <input type="number" className="form-control form-control-sm" placeholder="Max" value={filterAmountMax} onChange={e => setFilterAmountMax(e.target.value)} style={{ width: 60 }} />
+                                                          <input type="number" className="form-control form-control-sm" placeholder="Min" value={filterAmountMin} onChange={e => setFilterAmountMin(e.target.value)} style={{ width: 60 }} />
+                                                          <input type="number" className="form-control form-control-sm" placeholder="Max" value={filterAmountMax} onChange={e => setFilterAmountMax(e.target.value)} style={{ width: 60 }} />
                                                         </div>
+                                                      </FilterDropdown>
                                                     </th>
-                                                    <th className="d-none d-sm-table-cell">
+                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '10%' }}>
+                                                      Recurring
+                                                      <FilterDropdown>
                                                         <select className="form-select form-select-sm" value={filterRecurring} onChange={e => setFilterRecurring(e.target.value)}>
-                                                            <option value="">All</option>
-                                                            <option value="yes">Yes</option>
-                                                            <option value="no">No</option>
+                                                          <option value="">All</option>
+                                                          <option value="yes">Yes</option>
+                                                          <option value="no">No</option>
                                                         </select>
+                                                      </FilterDropdown>
                                                     </th>
-                                                    <th className="d-none d-sm-table-cell">
+                                                    <th className="text-center d-none d-sm-table-cell" style={{ width: '18%' }}>
+                                                      Mode of Payment
+                                                      <FilterDropdown>
                                                         <select className="form-select form-select-sm" value={filterModeOfPayment} onChange={e => setFilterModeOfPayment(e.target.value)}>
-                                                            <option value="">All</option>
-                                                            <option value="cash">Cash</option>
-                                                            <option value="credit_card">Credit Card</option>
-                                                            <option value="debit_card">Debit Card</option>
-                                                            <option value="upi">UPI</option>
-                                                            <option value="net_banking">Net Banking</option>
-                                                            <option value="wallet">Wallet</option>
+                                                          <option value="">All</option>
+                                                          <option value="cash">Cash</option>
+                                                          <option value="credit_card">Credit Card</option>
+                                                          <option value="debit_card">Debit Card</option>
+                                                          <option value="upi">UPI</option>
+                                                          <option value="net_banking">Net Banking</option>
+                                                          <option value="wallet">Wallet</option>
                                                         </select>
+                                                      </FilterDropdown>
                                                     </th>
-                                                    <th></th>
-                                                </tr>
+                                                    <th className="text-center" style={{ width: '12%' }}>
+                                                      Actions
+                                                    </th>
+                                                  </tr>
                                             </thead>
                                             <tbody>
                                                 {sortedExpenses.length > 0 ? (

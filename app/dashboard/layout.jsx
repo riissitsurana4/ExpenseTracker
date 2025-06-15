@@ -4,6 +4,7 @@ import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
 import BootstrapClient from '../../components/BootstrapClient';
 import Profile from '../../components/profile';
+import DashboardNavbarClient from '../../components/navbar.jsx';
 
 export default async function DashboardLayout({ children, modal }) {
   const supabase = await createClient();
@@ -23,14 +24,14 @@ export default async function DashboardLayout({ children, modal }) {
 
       <header className="navbar navbar-expand-lg navbar-dark bg-white shadow-sm fixed-top">
         <div className="container-fluid">
+          <Link href="/dashboard" className="navbar-brand d-flex align-items-center">
           <span className="navbar-brand fw-bold fs-4 text-primary">
             Smart Expense Hub
           </span>
-          
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNavbar" aria-controls="dashboardNavbar" aria-expanded="false" aria-label="Toggle navigation">
-            <span className="navbar-toggler-icon"></span>
+          </Link>
+          <button className="navbar-toggler d-block" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNavbar" aria-controls="dashboardNavbar" aria-expanded="false" aria-label="Toggle navigation" style={{ border: 'none', background: 'transparent' }}>
+            <span className="navbar-toggler-icon" style={{ filter: 'invert(1) grayscale(1)' }}></span>
           </button>
-          
           <div className="collapse navbar-collapse" id="dashboardNavbar">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               <li className="nav-item">
@@ -55,7 +56,7 @@ export default async function DashboardLayout({ children, modal }) {
           </div>
         </div>
       </header>
-
+      <DashboardNavbarClient />
       <main style={{paddingTop: '4.5rem' }}>
         {children}
         {modal}
