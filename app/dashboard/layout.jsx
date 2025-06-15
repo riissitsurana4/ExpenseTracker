@@ -29,7 +29,7 @@ export default async function DashboardLayout({ children, modal }) {
             Smart Expense Hub
           </span>
           </Link>
-          <button className="navbar-toggler d-block" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNavbar" aria-controls="dashboardNavbar" aria-expanded="false" aria-label="Toggle navigation" style={{ border: 'none', background: 'transparent' }}>
+          <button className="navbar-toggler d-lg-none d-block" type="button" data-bs-toggle="collapse" data-bs-target="#dashboardNavbar" aria-controls="dashboardNavbar" aria-expanded="false" aria-label="Toggle navigation" style={{ border: 'none', background: 'transparent' }}>
             <span className="navbar-toggler-icon" style={{ filter: 'invert(1) grayscale(1)' }}></span>
           </button>
           <div className="collapse navbar-collapse" id="dashboardNavbar">
