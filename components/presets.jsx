@@ -16,15 +16,15 @@ export const presetcategories = [
         subcategories : ["Insurance", "Loans", "Investments", "Savings", "Taxes"],
     },
     {
-        name : "Shopping",
-        subcategories : [],
-    },
-    {
         name : "Health",
         subcategories : ["Medical Bills", "Pharmacy", "Health Insurance"],
     },
     {
         name : "Miscellaneous",
         subcategories : ["Gifts", "Donations", "Subscriptions", "Entertainment", "Hobbies", "Education", "Pets"],
+    },
+    {
+        name : "Shopping",
+        subcategories : [],
     },
 ]
