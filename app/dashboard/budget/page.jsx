@@ -13,26 +13,113 @@ export default function BudgetPage() {
   const [monthlySpent, setMonthlySpent] = useState(0);
   const [yearlySpent, setYearlySpent] = useState(0);
   const [history, setHistory] = useState([]);
-  const [alert, setAlert] = useState('');
   const currentMonth = new Date().toISOString().slice(0, 7);
   const currentMonthDisplay = `${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`;
   const currentYear = new Date().getFullYear();
   const [userCurrency, setUserCurrency] = useState('INR');
+  const [categories, setCategories] = useState([]);
+  const [categoryBudgets, setCategoryBudgets] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState(null);
+  const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [input, setInput] = useState({});
+  const [expenses, setExpenses] = useState([]);
 
   useEffect(() => {
-    const fetchCurrency = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('users')
-          .select('currency')
-          .eq('id', user.id)
-          .single();
-        setUserCurrency(data?.currency || 'INR');
+    const fetchAll = async () => {
+      setLoading(true);
+      setError('');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        setError('User not found.');
+        setLoading(false);
+        return;
       }
+      setUserId(user.id);
+      const { data: userData } = await supabase
+        .from('users')
+        .select('currency')
+        .eq('id', user.id)
+        .single();
+      setUserCurrency(userData?.currency || 'INR');
+      const { data: budgetData } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month', currentMonth)
+        .single();
+      setBudget(budgetData);
+      const { data: yearlyBudgetData } = await supabase
+        .from('yearly_budgets')
+        .select('amount')
+        .eq('year', currentYear)
+        .eq('user_id', user.id)
+        .single();
+      if (yearlyBudgetData && yearlyBudgetData.amount !== undefined && yearlyBudgetData.amount !== null) {
+        setYearlyBudget(yearlyBudgetData.amount);
+        setYearlyAmountInput(yearlyBudgetData.amount.toString());
+      } else {
+        setYearlyBudget(0);
+        setYearlyAmountInput('');
+      }
+      const { data: categoriesData } = await supabase
+        .from('categories')
+        .select('id, name, budget')
+        .eq('user_id', user.id);
+      setCategories(categoriesData || []);
+      setCategoryBudgets(
+        (categoriesData || []).reduce((acc, cat) => ({ ...acc, [cat.id]: cat.budget || 0 }), {})
+      );
+      const { data: expensesData } = await supabase
+        .from('expenses')
+        .select('amount, created_at, category_id')
+        .eq('user_id', user.id);
+      setExpenses(expensesData || []);
+      const monthlySpent = (expensesData || [])
+        .filter(e => e.created_at.slice(0, 7) === currentMonth)
+        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      setMonthlySpent(monthlySpent);
+      const currentYearStr = String(currentYear);
+      const yearlySpent = (expensesData || [])
+        .filter(e => e.created_at.slice(0, 4) === currentYearStr)
+        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      setYearlySpent(yearlySpent);
+      const { data: allBudgets } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('month', { ascending: true });
+      const monthlyHistory = (allBudgets || []).map((b) => {
+        const spent = (expensesData || [])
+          .filter(e => e.created_at.slice(0, 7) === b.month)
+          .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+        return {
+          month: b.month,
+          budget: b.amount,
+          spent,
+        };
+      });
+      setHistory(monthlyHistory);
+      setLoading(false);
     };
-    fetchCurrency();
+    fetchAll();
   }, []);
+
+  const totalCategoryBudget = Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0);
+  const monthlyBudget = budget ? Number(budget.amount) : 0;
+
+  const handleBudgetChange = (categoryId, value) => {
+    const newValue = Math.max(0, parseFloat(value) || 0);
+    const newTotal = totalCategoryBudget - (categoryBudgets[categoryId] || 0) + newValue;
+    if (newTotal > monthlyBudget) {
+      setError('Total category budgets cannot exceed monthly budget.');
+      return;
+    }
+    setCategoryBudgets(prev => ({ ...prev, [categoryId]: newValue }));
+    setError('');
+  };
+
   const currencySign = (cur) => {
     switch (cur) {
       case 'USD': return '$';
@@ -41,78 +128,11 @@ export default function BudgetPage() {
       default: return '';
     }
   };
-  useEffect(() => {
-    fetchBudgetAndSpending();
-  }, []);
-
-  const fetchBudgetAndSpending = async () => {
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) return;
-
-    const { data: budgetData } = await supabase
-      .from('budgets')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('month', currentMonth)
-      .single();
-
-    const { data: expenses } = await supabase
-      .from('expenses')
-      .select('amount, created_at')
-      .eq('user_id', user.id);
-
-    const monthlySpent = expenses
-      .filter(e => e.created_at.slice(0, 7) === currentMonth)
-      .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-
-    setMonthlySpent(monthlySpent);
-    setBudget(budgetData);
-
-    const currentYearStr = String(currentYear);
-    const yearlySpent = expenses
-      .filter(e => e.created_at.slice(0, 4) === currentYearStr)
-      .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-    setYearlySpent(yearlySpent);
-
-    const { data: allBudgets } = await supabase
-      .from('budgets')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('month', { ascending: true });
-
-    const { data: yearlyBudgetData } = await supabase
-      .from('yearly_budgets')
-      .select('amount')
-      .eq('year', currentYear)
-      .eq('user_id', user.id)
-      .single();
-
-    if (yearlyBudgetData && yearlyBudgetData.amount !== undefined && yearlyBudgetData.amount !== null) {
-      setYearlyBudget(yearlyBudgetData.amount);
-      setYearlyAmountInput(yearlyBudgetData.amount.toString());
-    } else {
-      setYearlyBudget(0);
-      setYearlyAmountInput('');
-    }
-
-    const monthlyHistory = allBudgets.map((b) => {
-      const spent = expenses
-        .filter(e => e.created_at.slice(0, 7) === b.month)
-        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-
-      return {
-        month: b.month,
-        budget: b.amount,
-        spent,
-      };
-    });
-
-    setHistory(monthlyHistory);
-  };
 
   const handleYearlySave = async (e) => {
     e.preventDefault();
-    const user = (await supabase.auth.getUser()).data.user;
+    setError('');
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data: existing } = await supabase
       .from('yearly_budgets')
@@ -120,7 +140,6 @@ export default function BudgetPage() {
       .eq('year', currentYear)
       .eq('user_id', user.id)
       .single();
-
     if (existing) {
       await supabase
         .from('yearly_budgets')
@@ -135,18 +154,16 @@ export default function BudgetPage() {
         },
       ]);
     }
-
     setYearlyAmountInput('');
-    fetchBudgetAndSpending();
+    setLoading(true);
+    setTimeout(() => window.location.reload(), 500);
   };
-
-
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const user = (await supabase.auth.getUser()).data.user;
+    setError('');
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     if (budget) {
       await supabase
         .from('budgets')
@@ -161,9 +178,9 @@ export default function BudgetPage() {
         },
       ]);
     }
-
     setAmountInput('');
-    fetchBudgetAndSpending();
+    setLoading(true);
+    setTimeout(() => window.location.reload(), 500);
   };
 
   const percentageUsed = budget
@@ -175,6 +192,7 @@ export default function BudgetPage() {
       <BootstrapClient />
       <div className="container-fluid">
         <h1 className="text-primary fw-bold text-center mb-5 mt-0">Budget Overview</h1>
+        {error && <div className="alert alert-danger">{error}</div>}
         <div className="row mb-4">
           <div className="col-md-3 mb-2">
             <div className="card shadow-sm border-0 h-100">
@@ -193,7 +211,7 @@ export default function BudgetPage() {
                 <h6 className="text-muted">This Month's Spent</h6>
                 <h2 className="fw-bold text-info">{currencySign(userCurrency)}{monthlySpent.toFixed(2)}</h2>
                 <div className="progress" style={{ height: '8px' }}>
-                  <div className={`progress-bar ${percentageUsed >= 90 ? 'bg-danger' : 'bg-success'}`} style={{ width: `${percentageUsed}%` }} />
+                  <div className={`progress-bar ${percentageUsed >= 90 ? 'bg-danger' : 'bg-success'}`} style={{ width: `${percentageUsed}%`}} />
                 </div>
                 <small>{percentageUsed.toFixed(2)}% used</small>
               </div>
@@ -283,7 +301,6 @@ export default function BudgetPage() {
             </form>
           </div>
         </div>
-
         <div className="row">
           <div className="col-sm-12-mb-4">
             <h3 className="text-primary mb-4">Monthly Spending</h3>
@@ -301,6 +318,114 @@ export default function BudgetPage() {
               >
                 {percentageUsed.toFixed(2)}%
               </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h2 className ="text-primary mb-4">Category Budgets</h2>
+          {categories.length === 0 && (
+            <div className="alert alert-info">No categories found.</div>
+          )}
+          <div className="row">
+            {categories.map(category => {
+              const spent = expenses
+                .filter(e => e.category_id === category.id)
+                .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+              const budget = categoryBudgets[category.id] || 0;
+              const percent = budget ? Math.min((spent / budget) * 100, 100) : 0;
+              return (
+                <div className="col-md-4 mb-3" key={category.id}>
+                  <div className="card shadow-sm border-0 h-100">
+                    <div className="card-body">
+                      <h5 className="card-title">{category.name}</h5>
+                      <div>
+                        <span className="fw-bold text-success">
+                          Spent: {currencySign(userCurrency)}{spent.toFixed(2)}
+                        </span>
+                        <span className="ms-2 text-secondary">
+                          / {currencySign(userCurrency)}{budget}
+                        </span>
+                      </div>
+                      <div className="progress mt-2" style={{ height: '8px' }}>
+                        <div
+                          className={`progress-bar ${spent > budget ? 'bg-danger' : 'bg-success'}`}
+                          style={{ width: `${percent}%` }}
+                          role="progressbar"
+                          aria-valuenow={percent}
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                        />
+                      </div>
+                      <small className="text-secondary">{percent.toFixed(1)}% of budget used</small>
+                      <div className="mb-2 mt-3">
+                        <small className="text-muted">Budget:</small>
+                        {editingId === category.id ? (
+                          <div className="input-group mt-1">
+                            <input
+                              type="number"
+                              min={0}
+                              className="form-control"
+                              value={input[category.id] ?? categoryBudgets[category.id] ?? ''}
+                              onChange={e => setInput({ ...input, [category.id]: e.target.value })}
+                              autoFocus
+                            />
+                            <button
+                              className="btn btn-success"
+                              onClick={() => {
+                                handleBudgetChange(category.id, input[category.id]);
+                                setEditingId(null);
+                              }}
+                              disabled={
+                                !input[category.id] ||
+                                isNaN(input[category.id]) ||
+                                parseFloat(input[category.id]) < 0
+                              }
+                            >
+                              Save
+                            </button>
+                            <button
+                              className="btn btn-outline-secondary"
+                              onClick={() => setEditingId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="d-flex align-items-center mt-1">
+                            <span className="me-2">{currencySign(userCurrency)}{categoryBudgets[category.id] || 0}</span>
+                            <button
+                              className="btn btn-outline-primary btn-sm ms-auto"
+                              onClick={() => {
+                                setEditingId(category.id);
+                                setInput({ ...input, [category.id]: categoryBudgets[category.id] || 0 });
+                              }}
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3">
+            <strong>
+              Total Allocated: {currencySign(userCurrency)}
+              {Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0)} / {currencySign(userCurrency)}
+              {monthlyBudget}
+            </strong>
+            <div className="progress mt-2">
+              <div
+                className={`progress-bar ${Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0) > monthlyBudget ? 'bg-danger' : 'bg-success'}`}
+                style={{ width: `${(Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0) / (monthlyBudget || 1)) * 100}%` }}
+                role="progressbar"
+                aria-valuenow={Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0)}
+                aria-valuemin="0"
+                aria-valuemax={monthlyBudget}
+              />
             </div>
           </div>
         </div>

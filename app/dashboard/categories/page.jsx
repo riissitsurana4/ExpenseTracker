@@ -205,11 +205,11 @@ export default function CategoriesPage() {
             <BootstrapClient />
             <div className="container-fluid mt-3 text-center position-relative">
                 <h2 className="mb-4 text-primary">Categories</h2>
-                <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
-                    <button className="btn btn-success me-2" onClick={() => setShowAddCategoryModal(true)}>
+                <div className="d-flex justify-content-end flex-wrap gap-2" style={{ position: 'absolute', top: 0, right: 0, zIndex: 10, width: '100%', paddingRight: 0 }}>
+                    <button className="btn btn-success flex-fill" style={{ minWidth: 120, fontSize: '0.95rem' }} onClick={() => setShowAddCategoryModal(true)}>
                         <i className="bi bi-plus-lg me-1"></i> Add Category
                     </button>
-                    <button className="btn btn-primary" onClick={() => setShowAddSubcategoryModal(true)}>
+                    <button className="btn btn-primary flex-fill" style={{ minWidth: 120, fontSize: '0.95rem' }} onClick={() => setShowAddSubcategoryModal(true)}>
                         <i className="bi bi-plus-lg me-1"></i> Add Subcategory
                     </button>
                 </div>
@@ -218,9 +218,9 @@ export default function CategoriesPage() {
                         <div key={category.id} className="col-md-5 mx-2 mb-4">
                             <div className="mb-3 d-flex align-items-center justify-content-between bg-light rounded p-3 shadow-sm">
                                 <div className="d-flex align-items-center">
-                                    <strong className="text-primary me-3" style={{ fontSize: '2rem' }}>
+                                    <strong className="text-primary me-3" style={{ fontSize: '1.94rem' }}>
                                         {category.name}
-                                        <span className="fw-bold ms-2" style={{ fontSize: '1.2rem' }}>
+                                        <span className="fw-bold ms-2" style={{ fontSize: '1.16rem' }}>
                                             ₹{categoryTotals[category.name] ? categoryTotals[category.name].toFixed(2) : '0.00'}
                                         </span>
                                     </strong>
