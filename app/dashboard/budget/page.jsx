@@ -1,192 +1,240 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../../utils/supabase/client';
 import '../../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../../components/BootstrapClient';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+const formatDateToISO = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function BudgetPage() {
-  const [budget, setBudget] = useState(null);
-  const [yearlyBudget, setYearlyBudget] = useState(null);
-  const [amountInput, setAmountInput] = useState('');
-  const [yearlyAmountInput, setYearlyAmountInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [userCurrency, setUserCurrency] = useState('INR');
+  const [budgets, setBudgets] = useState([]);
+  const [monthlyInputAmount, setMonthlyInputAmount] = useState('');
+  const [yearlyInputAmount, setYearlyInputAmount] = useState('');
+  const [currentMonthlyBudget, setCurrentMonthlyBudget] = useState(null);
+  const [currentYearlyBudget, setCurrentYearlyBudget] = useState(null);
+  const [categoryBudgets, setCategoryBudgets] = useState({});
+  const [categories, setCategories] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [userId, setUserId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [input, setInput] = useState({});
   const [monthlySpent, setMonthlySpent] = useState(0);
   const [yearlySpent, setYearlySpent] = useState(0);
   const [history, setHistory] = useState([]);
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const currentMonthDisplay = `${String(new Date().getMonth() + 1).padStart(2, '0')}-${new Date().getFullYear()}`;
-  const currentYear = new Date().getFullYear();
-  const [userCurrency, setUserCurrency] = useState('INR');
-  const [categories, setCategories] = useState([]);
-  const [categoryBudgets, setCategoryBudgets] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState(null);
-  const [error, setError] = useState('');
-  const [editingId, setEditingId] = useState(null);
-  const [input, setInput] = useState({});
-  const [expenses, setExpenses] = useState([]);
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      setError('');
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        setError('User not found.');
-        setLoading(false);
-        return;
-      }
-      setUserId(user.id);
-      const { data: userData } = await supabase
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const currentMonthIso = formatDateToISO(new Date(currentYear, currentMonth, 1)).slice(0, 7);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      setError('User not found. Please log in.');
+      setLoading(false);
+      return;
+    }
+    setUserId(user.id);
+    try {
+      const { data: userData, error: userCurrencyError } = await supabase
         .from('users')
         .select('currency')
         .eq('id', user.id)
         .single();
+      if (userCurrencyError) throw userCurrencyError;
       setUserCurrency(userData?.currency || 'INR');
-      const { data: budgetData } = await supabase
+      const { data: allBudgetsData, error: allBudgetsError } = await supabase
         .from('budgets')
         .select('*')
         .eq('user_id', user.id)
-        .eq('month', currentMonth)
-        .single();
-      setBudget(budgetData);
-      const { data: yearlyBudgetData } = await supabase
-        .from('yearly_budgets')
-        .select('amount')
-        .eq('year', currentYear)
-        .eq('user_id', user.id)
-        .single();
-      if (yearlyBudgetData && yearlyBudgetData.amount !== undefined && yearlyBudgetData.amount !== null) {
-        setYearlyBudget(yearlyBudgetData.amount);
-        setYearlyAmountInput(yearlyBudgetData.amount.toString());
-      } else {
-        setYearlyBudget(0);
-        setYearlyAmountInput('');
-      }
-      const { data: categoriesData } = await supabase
+        .order('start_date', { ascending: true });
+      if (allBudgetsError) throw allBudgetsError;
+      setBudgets(allBudgetsData || []);
+      const monthBudget = (allBudgetsData || []).find(
+        (b) => b.budget_period_type === 'monthly' && formatDateToISO(new Date(b.start_date)).slice(0, 7) === currentMonthIso
+      );
+      setCurrentMonthlyBudget(monthBudget);
+      setMonthlyInputAmount(monthBudget ? monthBudget.amount.toString() : '');
+      const yearBudget = (allBudgetsData || []).find(
+        (b) => b.budget_period_type === 'yearly' && new Date(b.start_date).getFullYear() === currentYear
+      );
+      setCurrentYearlyBudget(yearBudget);
+      setYearlyInputAmount(yearBudget ? yearBudget.amount.toString() : '');
+      const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('id, name, budget')
         .eq('user_id', user.id);
+      if (categoriesError) throw categoriesError;
       setCategories(categoriesData || []);
-      setCategoryBudgets(
-        (categoriesData || []).reduce((acc, cat) => ({ ...acc, [cat.id]: cat.budget || 0 }), {})
-      );
-      const { data: expensesData } = await supabase
+      const newCategoryBudgets = (categoriesData || []).reduce((acc, cat) => ({ ...acc, [cat.id]: cat.budget || 0 }), {});
+      setCategoryBudgets(newCategoryBudgets);
+      const { data: expensesData, error: expensesError } = await supabase
         .from('expenses')
-        .select('amount, created_at, category_id')
-        .eq('user_id', user.id);
-      setExpenses(expensesData || []);
-      const monthlySpent = (expensesData || [])
-        .filter(e => e.created_at.slice(0, 7) === currentMonth)
-        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-      setMonthlySpent(monthlySpent);
-      const currentYearStr = String(currentYear);
-      const yearlySpent = (expensesData || [])
-        .filter(e => e.created_at.slice(0, 4) === currentYearStr)
-        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-      setYearlySpent(yearlySpent);
-      const { data: allBudgets } = await supabase
-        .from('budgets')
         .select('*')
-        .eq('user_id', user.id)
-        .order('month', { ascending: true });
-      const monthlyHistory = (allBudgets || []).map((b) => {
-        const spent = (expensesData || [])
-          .filter(e => e.created_at.slice(0, 7) === b.month)
-          .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-        return {
-          month: b.month,
-          budget: b.amount,
-          spent,
-        };
-      });
-      setHistory(monthlyHistory);
+        .eq('user_id', user.id);
+      if (expensesError) throw expensesError;
+      setExpenses(expensesData || []);
+      const currentMonthSpent = (expensesData || [])
+        .filter(e => e.created_at && e.created_at.slice(0, 7) === currentMonthIso)
+        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      setMonthlySpent(currentMonthSpent);
+      const currentYearSpent = (expensesData || [])
+        .filter(e => e.created_at && e.created_at.slice(0, 4) === String(currentYear))
+        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      setYearlySpent(currentYearSpent);
+      const monthlyHistoryData = (allBudgetsData || [])
+        .filter(b => b.budget_period_type === 'monthly')
+        .map((b) => {
+          const budgetMonthIso = formatDateToISO(new Date(b.start_date)).slice(0, 7);
+          const spent = (expensesData || [])
+            .filter(e => e.created_at && e.created_at.slice(0, 7) === budgetMonthIso)
+            .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+          return {
+            month: budgetMonthIso,
+            budget: b.amount,
+            spent,
+          };
+        })
+        .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+      setHistory(monthlyHistoryData);
+    } catch (err) {
+      setError(`Failed to load data: ${err.message}`);
+    } finally {
       setLoading(false);
+    }
+  }, [currentMonthIso, currentYear]);
+
+  const handleSaveBudget = async (e, periodType) => {
+    e.preventDefault();
+    setError('');
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      setError('User not authenticated for saving budget. Please log in.');
+      return;
+    }
+    setUserId(user.id);
+    let amountToSave;
+    let existingBudget;
+    let startDate;
+    let endDate;
+    if (periodType === 'monthly') {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        amountToSave = parseFloat(monthlyInputAmount);
+        existingBudget = currentMonthlyBudget;
+        startDate = formatDateToISO(startOfMonth);
+        endDate = formatDateToISO(endOfMonth);
+    } else if (periodType === 'yearly') {
+        const year = new Date().getFullYear();
+        const startOfYear = new Date(year, 0, 1);
+        const endOfYear = new Date(year, 11, 31);
+        amountToSave = parseFloat(yearlyInputAmount);
+        existingBudget = currentYearlyBudget;
+        startDate = formatDateToISO(startOfYear);
+        endDate = formatDateToISO(endOfYear);
+    } else {
+        setError('Invalid budget period type.');
+        return;
+    }
+    if (isNaN(amountToSave) || amountToSave < 0) {
+      setError('Please enter a valid positive amount.');
+      return;
+    }
+    const budgetData = {
+      user_id: user.id,
+      amount: amountToSave,
+      start_date: startDate,
+      end_date: endDate,
+      budget_period_type: periodType,
     };
-    fetchAll();
-  }, []);
+    try {
+      if (existingBudget) {
+        const { error: updateError } = await supabase
+          .from('budgets')
+          .update(budgetData)
+          .eq('id', existingBudget.id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('budgets')
+          .insert([budgetData]);
+        if (insertError) throw insertError;
+      }
+      fetchAll();
+    } catch (err) {
+      setError(`Failed to save budget: ${err.message}`);
+    }
+  };
 
   const totalCategoryBudget = Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0);
-  const monthlyBudget = budget ? Number(budget.amount) : 0;
+  const monthlyBudgetAmount = currentMonthlyBudget ? Number(currentMonthlyBudget.amount) : 0;
+  const yearlyBudgetAmount = currentYearlyBudget ? Number(currentYearlyBudget.amount) : 0;
 
-  const handleBudgetChange = (categoryId, value) => {
+  const handleBudgetChange = async (categoryId, value) => {
     const newValue = Math.max(0, parseFloat(value) || 0);
     const newTotal = totalCategoryBudget - (categoryBudgets[categoryId] || 0) + newValue;
-    if (newTotal > monthlyBudget) {
-      setError('Total category budgets cannot exceed monthly budget.');
+    if (newTotal > monthlyBudgetAmount) {
+      setError('Total category budgets cannot exceed the overall monthly budget.');
       return;
     }
     setCategoryBudgets(prev => ({ ...prev, [categoryId]: newValue }));
     setError('');
+    try {
+      const { error: updateError } = await supabase
+        .from('categories')
+        .update({ budget: newValue })
+        .eq('id', categoryId)
+        .eq('user_id', userId);
+      if (updateError) throw updateError;
+      fetchAll();
+    } catch (err) {
+      setError(`Failed to update category budget: ${err.message}`);
+    }
   };
+
+  useEffect(() => {
+      fetchAll();
+  }, [fetchAll]);
 
   const currencySign = (cur) => {
     switch (cur) {
       case 'USD': return '$';
       case 'EUR': return '€';
       case 'INR': return '₹';
+      case 'GBP': return '£';
       default: return '';
     }
   };
-
-  const handleYearlySave = async (e) => {
-    e.preventDefault();
-    setError('');
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: existing } = await supabase
-      .from('yearly_budgets')
-      .select('*')
-      .eq('year', currentYear)
-      .eq('user_id', user.id)
-      .single();
-    if (existing) {
-      await supabase
-        .from('yearly_budgets')
-        .update({ amount: parseFloat(yearlyAmountInput) })
-        .eq('id', existing.id);
-    } else {
-      await supabase.from('yearly_budgets').insert([
-        {
-          amount: parseFloat(yearlyAmountInput),
-          year: currentYear,
-          user_id: user.id,
-        },
-      ]);
-    }
-    setYearlyAmountInput('');
-    setLoading(true);
-    setTimeout(() => window.location.reload(), 500);
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setError('');
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    if (budget) {
-      await supabase
-        .from('budgets')
-        .update({ amount: parseFloat(amountInput) })
-        .eq('id', budget.id);
-    } else {
-      await supabase.from('budgets').insert([
-        {
-          amount: parseFloat(amountInput),
-          month: currentMonth,
-          user_id: user.id,
-        },
-      ]);
-    }
-    setAmountInput('');
-    setLoading(true);
-    setTimeout(() => window.location.reload(), 500);
-  };
-
-  const percentageUsed = budget
-    ? Math.min((monthlySpent / budget.amount) * 100, 100)
+  const percentageUsedMonthly = monthlyBudgetAmount
+    ? Math.min((monthlySpent / monthlyBudgetAmount) * 100, 100)
     : 0;
-
+  const percentageUsedYearly = yearlyBudgetAmount
+    ? Math.min((yearlySpent / yearlyBudgetAmount) * 100, 100)
+    : 0;
+  if (loading) {
+    return (
+      <>
+        <BootstrapClient />
+        <div className="container-fluid text-center mt-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-2">Loading budget data...</p>
+        </div>
+      </>
+    );
+  }
   return (
     <>
       <BootstrapClient />
@@ -197,10 +245,10 @@ export default function BudgetPage() {
           <div className="col-md-3 mb-2">
             <div className="card shadow-sm border-0 h-100">
               <div className="card-body text-center">
-                <h6 className="text-muted">This Month's Budget <span className="badge bg-light text-dark ms-1">{new Date(currentMonth + '-01').toLocaleString('default', { month: 'long' })}</span></h6>
-                <h2 className="fw-bold text-primary">{currencySign(userCurrency)}{budget ? budget.amount.toFixed(2) : '0.00'}</h2>
-                <span className={`badge ${monthlySpent > (budget?.amount || 0) ? 'bg-danger' : 'bg-success'}`}>
-                  {monthlySpent > (budget?.amount || 0) ? 'Over Budget' : 'On Track'}
+                <h6 className="text-muted">This Month's Budget <span className="badge bg-light text-dark ms-1">{new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long' })}</span></h6>
+                <h2 className="fw-bold text-primary">{currencySign(userCurrency)}{monthlyBudgetAmount.toFixed(2)}</h2>
+                <span className={`badge ${monthlySpent > monthlyBudgetAmount ? 'bg-danger' : 'bg-success'}`}>
+                  {monthlySpent > monthlyBudgetAmount ? 'Over Budget' : 'On Track'}
                 </span>
               </div>
             </div>
@@ -211,9 +259,9 @@ export default function BudgetPage() {
                 <h6 className="text-muted">This Month's Spent</h6>
                 <h2 className="fw-bold text-info">{currencySign(userCurrency)}{monthlySpent.toFixed(2)}</h2>
                 <div className="progress" style={{ height: '8px' }}>
-                  <div className={`progress-bar ${percentageUsed >= 90 ? 'bg-danger' : 'bg-success'}`} style={{ width: `${percentageUsed}%`}} />
+                  <div className={`progress-bar ${percentageUsedMonthly >= 90 ? 'bg-danger' : 'bg-success'}`} style={{ width: `${percentageUsedMonthly}%`}} />
                 </div>
-                <small>{percentageUsed.toFixed(2)}% used</small>
+                <small>{percentageUsedMonthly.toFixed(2)}% used</small>
               </div>
             </div>
           </div>
@@ -221,10 +269,10 @@ export default function BudgetPage() {
             <div className="card shadow-sm border-0 h-100 bg-white border-primary">
               <div className="card-body text-center">
                 <h6 className="text-muted">Yearly Budget</h6>
-                <h2 className="fw-bold text-primary">{currencySign(userCurrency)}{yearlyBudget ? yearlyBudget.toFixed(2) : '0.00'}</h2>
-                <span className={`badge px-3 py-2 fs-6 ${yearlyBudget && yearlySpent > yearlyBudget ? 'bg-danger' : 'bg-success'}`}
+                <h2 className="fw-bold text-primary">{currencySign(userCurrency)}{yearlyBudgetAmount.toFixed(2)}</h2>
+                <span className={`badge px-3 py-2 fs-6 ${yearlySpent > yearlyBudgetAmount ? 'bg-danger' : 'bg-success'}`}
                   style={{ fontWeight: 500 }}>
-                  {yearlyBudget && yearlySpent > yearlyBudget ? 'Over Budget' : 'On Track'}
+                  {yearlySpent > yearlyBudgetAmount ? 'Over Budget' : 'On Track'}
                 </span>
                 <div className="mt-2">
                   <small className="text-secondary">{currentYear}</small>
@@ -239,23 +287,23 @@ export default function BudgetPage() {
                 <h2 className="fw-bold text-info">{currencySign(userCurrency)}{yearlySpent.toFixed(2)}</h2>
                 <div className="progress mx-auto mt-2" style={{ height: '8px', width: '80%' }}>
                   <div
-                    className={`progress-bar ${yearlyBudget && yearlySpent > yearlyBudget ? 'bg-danger' : yearlyBudget && yearlySpent > 0.9 * yearlyBudget ? 'bg-warning' : 'bg-success'}`}
+                    className={`progress-bar ${yearlyBudgetAmount && yearlySpent > yearlyBudgetAmount ? 'bg-danger' : yearlyBudgetAmount && yearlySpent > 0.9 * yearlyBudgetAmount ? 'bg-warning' : 'bg-success'}`}
                     role="progressbar"
-                    style={{ width: yearlyBudget ? `${Math.min((yearlySpent / yearlyBudget) * 100, 100)}%` : '0%' }}
-                    aria-valuenow={yearlyBudget ? (yearlySpent / yearlyBudget) * 100 : 0}
+                    style={{ width: yearlyBudgetAmount ? `${percentageUsedYearly}%` : '0%' }}
+                    aria-valuenow={percentageUsedYearly}
                     aria-valuemin="0"
                     aria-valuemax="100"
                   >
                   </div>
                 </div>
-                <small className="text-secondary">{yearlyBudget ? `${Math.min((yearlySpent / yearlyBudget) * 100, 100).toFixed(1)}% of yearly budget used` : '0% used'}</small>
+                <small className="text-secondary">{yearlyBudgetAmount ? `${percentageUsedYearly.toFixed(1)}% of yearly budget used` : '0% used'}</small>
               </div>
             </div>
           </div>
         </div>
         <div className="row mb-4">
           <div className="col-sm-6 mb-4">
-            <form onSubmit={handleSave} className="row g-2 align-items-center mb-4">
+            <form onSubmit={(e) => handleSaveBudget(e, 'monthly')} className="row g-2 align-items-center mb-4">
               <div className="col-auto">
                 <label className="form-label mb-0">Monthly Budget</label>
               </div>
@@ -266,19 +314,19 @@ export default function BudgetPage() {
                     type="number"
                     className="form-control"
                     placeholder="Enter amount"
-                    value={amountInput}
-                    onChange={e => setAmountInput(e.target.value)}
+                    value={monthlyInputAmount}
+                    onChange={e => setMonthlyInputAmount(e.target.value)}
                     required
                   />
                 </div>
               </div>
               <div className="col-auto">
-                <button type="submit" className="btn btn-primary">{budget ? 'Update' : 'Set'} Budget</button>
+                <button type="submit" className="btn btn-primary">{currentMonthlyBudget ? 'Update' : 'Set'} Budget</button>
               </div>
             </form>
           </div>
           <div className="col-sm-6 mb-4">
-            <form onSubmit={handleYearlySave} className="row g-2 align-items-center mb-4">
+            <form onSubmit={(e) => handleSaveBudget(e, 'yearly')} className="row g-2 align-items-center mb-4">
               <div className="col-auto">
                 <label className="form-label mb-0">Yearly Budget</label>
               </div>
@@ -289,14 +337,14 @@ export default function BudgetPage() {
                     type="number"
                     className="form-control"
                     placeholder="Enter amount"
-                    value={yearlyAmountInput}
-                    onChange={e => setYearlyAmountInput(e.target.value)}
+                    value={yearlyInputAmount}
+                    onChange={e => setYearlyInputAmount(e.target.value)}
                     required
                   />
                 </div>
               </div>
               <div className="col-auto">
-                <button type="submit" className="btn btn-primary">{yearlyBudget ? 'Update' : 'Set'} Budget</button>
+                <button type="submit" className="btn btn-primary">{currentYearlyBudget ? 'Update' : 'Set'} Budget</button>
               </div>
             </form>
           </div>
@@ -305,32 +353,33 @@ export default function BudgetPage() {
           <div className="col-sm-12-mb-4">
             <h3 className="text-primary mb-4">Monthly Spending</h3>
             <p className="text-secondary mb-4">
-              You have spent {currencySign(userCurrency)}{monthlySpent.toFixed(2)} this month, which is {percentageUsed.toFixed(2)}% of your budget.
+              You have spent {currencySign(userCurrency)}{monthlySpent.toFixed(2)} this month, which is {percentageUsedMonthly.toFixed(2)}% of your budget.
             </p>
             <div className="progress mb-3" style={{ height: '20px' }}>
               <div
-                className={`progress-bar ${percentageUsed >= 90 ? 'bg-danger' : 'bg-success'}`}
+                className={`progress-bar ${percentageUsedMonthly >= 90 ? 'bg-danger' : 'bg-success'}`}
                 role="progressbar"
-                style={{ width: `${percentageUsed}%` }}
-                aria-valuenow={percentageUsed}
+                style={{ width: `${percentageUsedMonthly}%` }}
+                aria-valuenow={percentageUsedMonthly}
                 aria-valuemin="0"
                 aria-valuemax="100"
               >
-                {percentageUsed.toFixed(2)}%
+                {percentageUsedMonthly.toFixed(2)}%
               </div>
             </div>
           </div>
         </div>
         <div>
-          <h2 className ="text-primary mb-4">Category Budgets</h2>
+          <h2 className="text-primary mb-4">Category Budgets</h2>
           {categories.length === 0 && (
             <div className="alert alert-info">No categories found.</div>
           )}
           <div className="row">
             {categories.map(category => {
-              const spent = expenses
-                .filter(e => e.category_id === category.id)
-                .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+              const spent = (expenses && Array.isArray(expenses))
+                ? expenses.filter(e => e && e.category_id !== undefined && category.id !== undefined && String(e.category_id) === String(category.id) && e.created_at && e.amount !== undefined && e.created_at.slice(0, 7) === currentMonthIso)
+                    .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+                : 0;
               const budget = categoryBudgets[category.id] || 0;
               const percent = budget ? Math.min((spent / budget) * 100, 100) : 0;
               return (
@@ -343,7 +392,7 @@ export default function BudgetPage() {
                           Spent: {currencySign(userCurrency)}{spent.toFixed(2)}
                         </span>
                         <span className="ms-2 text-secondary">
-                          / {currencySign(userCurrency)}{budget}
+                          / {currencySign(userCurrency)}{budget.toFixed(2)}
                         </span>
                       </div>
                       <div className="progress mt-2" style={{ height: '8px' }}>
@@ -365,7 +414,7 @@ export default function BudgetPage() {
                               type="number"
                               min={0}
                               className="form-control"
-                              value={input[category.id] ?? categoryBudgets[category.id] ?? ''}
+                              value={input[category.id] ?? (categoryBudgets[category.id] !== undefined ? categoryBudgets[category.id] : '')}
                               onChange={e => setInput({ ...input, [category.id]: e.target.value })}
                               autoFocus
                             />
@@ -392,7 +441,7 @@ export default function BudgetPage() {
                           </div>
                         ) : (
                           <div className="d-flex align-items-center mt-1">
-                            <span className="me-2">{currencySign(userCurrency)}{categoryBudgets[category.id] || 0}</span>
+                            <span className="me-2">{currencySign(userCurrency)}{budget.toFixed(2)}</span>
                             <button
                               className="btn btn-outline-primary btn-sm ms-auto"
                               onClick={() => {
@@ -414,21 +463,59 @@ export default function BudgetPage() {
           <div className="mt-3">
             <strong>
               Total Allocated: {currencySign(userCurrency)}
-              {Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0)} / {currencySign(userCurrency)}
-              {monthlyBudget}
+              {totalCategoryBudget.toFixed(2)} / {currencySign(userCurrency)}
+              {monthlyBudgetAmount.toFixed(2)}
             </strong>
             <div className="progress mt-2">
               <div
-                className={`progress-bar ${Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0) > monthlyBudget ? 'bg-danger' : 'bg-success'}`}
-                style={{ width: `${(Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0) / (monthlyBudget || 1)) * 100}%` }}
+                className={`progress-bar ${totalCategoryBudget > monthlyBudgetAmount ? 'bg-danger' : 'bg-success'}`}
+                style={{ width: `${(totalCategoryBudget / (monthlyBudgetAmount || 1)) * 100}%` }}
                 role="progressbar"
-                aria-valuenow={Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0)}
+                aria-valuenow={totalCategoryBudget}
                 aria-valuemin="0"
-                aria-valuemax={monthlyBudget}
+                aria-valuemax={monthlyBudgetAmount}
               />
             </div>
           </div>
         </div>
+        <h2 className="text-primary mt-5 mb-4">Monthly Budget History</h2>
+        {history.length === 0 ? (
+          <div className="alert alert-info">No monthly budget history available.</div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Budget</th>
+                  <th>Spent</th>
+                  <th>Remaining</th>
+                  <th>% Used</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((item) => {
+                  const remaining = item.budget - item.spent;
+                  const percentUsed = item.budget ? (item.spent / item.budget) * 100 : 0;
+                  const status = remaining < 0 ? 'Over Budget' : 'On Track';
+                  return (
+                    <tr key={item.month}>
+                      <td>{new Date(`${item.month}-01`).toLocaleString('default', { month: 'long', year: 'numeric' })}</td>
+                      <td>{currencySign(userCurrency)}{item.budget.toFixed(2)}</td>
+                      <td>{currencySign(userCurrency)}{item.spent.toFixed(2)}</td>
+                      <td>{currencySign(userCurrency)}{remaining.toFixed(2)}</td>
+                      <td>{percentUsed.toFixed(2)}%</td>
+                      <td className={remaining < 0 ? 'text-danger' : 'text-success'}>
+                        {status}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );
