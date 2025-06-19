@@ -7,6 +7,7 @@ const supabase = createClient(
 
 function calculateNextOccurrence(date, type) {
   const d = new Date(date);
+  if (type === 'daily') d.setDate(d.getDate() + 1);
   if (type === 'weekly') d.setDate(d.getDate() + 7);
   if (type === 'monthly') d.setMonth(d.getMonth() + 1);
   if (type === 'yearly') d.setFullYear(d.getFullYear() + 1);
@@ -16,7 +17,6 @@ function calculateNextOccurrence(date, type) {
 export default async function handler(req, res) {
   const today = new Date().toISOString().slice(0, 10);
 
- 
   const { data: recurringExpenses, error } = await supabase
     .from('expenses')
     .select('*')
@@ -31,23 +31,26 @@ export default async function handler(req, res) {
   for (const exp of recurringExpenses) {
     if (!exp.next_occurrence || new Date(exp.next_occurrence) > new Date(today)) continue;
 
-    await supabase.from('expenses').insert([{
-      title: exp.title,
-      amount: exp.amount,
-      category: exp.category,
-      subcategory: exp.subcategory,
-      description: exp.description,
-      created_at: exp.next_occurrence,
-      user_id: exp.user_id,
-      is_recurring: exp.is_recurring,
-      recurring_type: exp.recurring_type,
-      next_occurrence: null
-    }]);
-
-    const newNext = calculateNextOccurrence(exp.next_occurrence, exp.recurring_type);
+    let nextDate = exp.next_occurrence;
+    while (new Date(nextDate) <= new Date(today)) {
+      await supabase.from('expenses').insert([{
+        title: exp.title,
+        amount: exp.amount,
+        category: exp.category,
+        subcategory: exp.subcategory,
+        description: exp.description,
+        created_at: nextDate,
+        user_id: exp.user_id,
+        is_recurring: exp.is_recurring,
+        recurring_type: exp.recurring_type,
+        next_occurrence: null
+      }]);
+      nextDate = calculateNextOccurrence(nextDate, exp.recurring_type);
+    }
+    
     await supabase
       .from('expenses')
-      .update({ next_occurrence: newNext })
+      .update({ next_occurrence: nextDate })
       .eq('id', exp.id);
   }
 

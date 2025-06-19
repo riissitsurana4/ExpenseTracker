@@ -12,7 +12,7 @@ export default function CategoriesPage() {
     const [newSubcategoryName, setNewSubcategoryName] = useState("");
     const [newSubcategoryParentId, setNewSubcategoryParentId] = useState(null);
     const [user, setUser] = useState(null);
-    const [openCategoryId, setOpenCategoryId] = useState(null);
+    const [openCategoryIds, setOpenCategoryIds] = useState([]);
     const [subcategoryTotals, setSubcategoryTotals] = useState({});
     const [categoryTotals, setCategoryTotals] = useState({});
     const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
@@ -103,7 +103,6 @@ export default function CategoriesPage() {
             console.error('Error updating category:', error);
             return;
         }
-        // Update all expenses with the old category name
         await supabase
             .from('expenses')
             .update({ category: newName.trim() })
@@ -186,7 +185,7 @@ export default function CategoriesPage() {
         if (!user) return;
         const { data, error } = await supabase
             .from('expenses')
-            .select('category, amount')
+            .select('category_id, amount, categories(name)')
             .eq('user_id', user.id);
         if (error || !Array.isArray(data)) {
             console.error('Error fetching category totals:', error, data);
@@ -194,8 +193,9 @@ export default function CategoriesPage() {
         }
         const totals = {};
         data.forEach(exp => {
-            if (!totals[exp.category]) totals[exp.category] = 0;
-            totals[exp.category] += exp.amount;
+            const catName = exp.categories?.name || 'Unknown';
+            if (!totals[catName]) totals[catName] = 0;
+            totals[catName] += exp.amount;
         });
         setCategoryTotals(totals);
     }
@@ -205,12 +205,26 @@ export default function CategoriesPage() {
             <BootstrapClient />
             <div className="container-fluid mt-3 text-center position-relative">
                 <h2 className="mb-4 text-primary">Categories</h2>
-                <div className="d-flex justify-content-end flex-wrap gap-2" style={{ position: 'absolute', top: 0, right: 0, zIndex: 10, width: '100%', paddingRight: 0 }}>
-                    <button className="btn btn-success flex-fill" style={{ minWidth: 120, fontSize: '0.95rem' }} onClick={() => setShowAddCategoryModal(true)}>
-                        <i className="bi bi-plus-lg me-1"></i> Add Category
+                <div className="position-absolute top-0 end-0 mt-2 me-2 d-flex flex-row flex-wrap gap-2" style={{ zIndex: 10 }}>
+                    <button className="btn btn-outline-primary flex-shrink-0 d-flex align-items-center" style={{ minWidth: 110, fontSize: '0.95rem' }} onClick={() => setShowAddCategoryModal(true)}>
+                        <i className="bi bi-plus-lg me-1"></i> <span className="d-none d-sm-inline">Add Category</span>
                     </button>
-                    <button className="btn btn-primary flex-fill" style={{ minWidth: 120, fontSize: '0.95rem' }} onClick={() => setShowAddSubcategoryModal(true)}>
-                        <i className="bi bi-plus-lg me-1"></i> Add Subcategory
+                    <button className="btn btn-outline-primary flex-shrink-0 d-flex align-items-center" style={{ minWidth: 110, fontSize: '0.95rem' }} onClick={() => setShowAddSubcategoryModal(true)}>
+                        <i className="bi bi-plus-lg me-1"></i> <span className="d-none d-sm-inline">Add Subcategory</span>
+                    </button>
+                </div>
+                <div className="d-flex justify-content-end gap-2 mb-3" style={{ marginTop: '2.5rem' }}>
+                    <button
+                        className={`btn btn-outline-primary btn-sm`}
+                        onClick={() => {
+                            if (openCategoryIds.length === categories.length) {
+                                setOpenCategoryIds([]);
+                            } else {
+                                setOpenCategoryIds(categories.map(cat => cat.id));
+                            }
+                        }}
+                    >
+                        {openCategoryIds.length === categories.length ? 'Collapse All' : 'Open All'}
                     </button>
                 </div>
                 <div className="row justify-content-center">
@@ -225,7 +239,11 @@ export default function CategoriesPage() {
                                         </span>
                                     </strong>
                                     {category.subcategories && category.subcategories.length > 0 && (
-                                        <span style={{ cursor: 'pointer' }} onClick={() => setOpenCategoryId(openCategoryId === category.id ? null : category.id)} className="ms-2">
+                                        <span style={{ cursor: 'pointer' }} onClick={() => {
+                                            setOpenCategoryIds(ids => ids.includes(category.id)
+                                                ? ids.filter(id => id !== category.id)
+                                                : [...ids, category.id]);
+                                        }} className="ms-2">
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                                 <polyline points="6 9 12 15 18 9" />
                                             </svg>
@@ -241,7 +259,7 @@ export default function CategoriesPage() {
                                     </button>
                                 </div>
                             </div>
-                            {openCategoryId === category.id && category.subcategories && category.subcategories.length > 0 && (
+                            {openCategoryIds.includes(category.id) && category.subcategories && category.subcategories.length > 0 && (
                                 <ul className="list-group list-group-flush mt-2">
                                     {category.subcategories.map(sub => (
                                         <li key={sub.id} className="list-group-item border-0 text-secondary text-start d-flex justify-content-between align-items-center bg-white rounded mb-2 shadow-sm">

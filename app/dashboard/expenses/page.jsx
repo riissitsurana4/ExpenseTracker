@@ -21,6 +21,7 @@ export default function Expenses() {
     const [title, setTitle] = useState('');
     const [amount, setAmount] = useState('');
     const [category, setCategory] = useState('');
+    const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [subcategory, setSubcategory] = useState("");
     const [description, setDescription] = useState("");
     const [createdAt, setCreatedAt] = useState('');
@@ -40,6 +41,8 @@ export default function Expenses() {
     const [modeOfPayment, setModeOfPayment] = useState('');
     const [sortColumn, setSortColumn] = useState('');
     const [sortDirection, setSortDirection] = useState('asc');
+    const [isRecurring, setIsRecurring] = useState('');
+    const [recurringType, setRecurringType] = useState('');
 
     const handleSort = (column) => {
         if (sortColumn === column) {
@@ -57,7 +60,14 @@ export default function Expenses() {
         if (date) filteredData = filteredData.filter(exp => exp.created_at.slice(0, 10) === date);
         if (startDate) filteredData = filteredData.filter(exp => new Date(exp.created_at) >= new Date(startDate));
         if (endDate) filteredData = filteredData.filter(exp => new Date(exp.created_at) <= new Date(endDate));
-        if (filterCategory) filteredData = filteredData.filter(exp => exp.category === filterCategory);
+
+        if (filterCategory) {
+            const selectedFilterCategoryId = categories.find(cat => cat.name === filterCategory)?.id;
+            if (selectedFilterCategoryId) {
+                filteredData = filteredData.filter(exp => exp.category_id === selectedFilterCategoryId);
+            }
+        }
+
         if (filterSubcategory) filteredData = filteredData.filter(exp => exp.subcategory === filterSubcategory);
         if (filterAmountMin) filteredData = filteredData.filter(exp => parseFloat(exp.amount) >= parseFloat(filterAmountMin));
         if (filterAmountMax) filteredData = filteredData.filter(exp => parseFloat(exp.amount) <= parseFloat(filterAmountMax));
@@ -67,19 +77,28 @@ export default function Expenses() {
             else if (filterRecurring === 'no') filteredData = filteredData.filter(exp => !exp.is_recurring);
         }
         return filteredData;
-    }, [expenses, date, month, year, startDate, endDate, filterCategory, filterSubcategory, filterAmountMin, filterAmountMax, filterModeOfPayment, filterRecurring]);
+    }, [expenses, date, month, year, startDate, endDate, filterCategory, filterSubcategory, filterAmountMin, filterAmountMax, filterModeOfPayment, filterRecurring, categories]);
 
     const sortedExpenses = useMemo(() => {
         let sorted = [...filtered];
         if (sortColumn) {
             sorted.sort((a, b) => {
+
+                if (sortColumn === 'category_id') {
+                    const nameA = categories.find(cat => cat.id === a.category_id)?.name || '';
+                    const nameB = categories.find(cat => cat.id === b.category_id)?.name || '';
+                    if (nameA < nameB) return sortDirection === 'asc' ? -1 : 1;
+                    if (nameA > nameB) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                }
+
                 if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
                 if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
                 return 0;
             });
         }
         return sorted;
-    }, [filtered, sortColumn, sortDirection]);
+    }, [filtered, sortColumn, sortDirection, categories]);
 
     useEffect(() => {
         const fetchCurrency = async () => {
@@ -108,19 +127,28 @@ export default function Expenses() {
         if (expense) {
             setTitle(expense.title || '');
             setAmount(expense.amount || '');
-            setCategory(expense.category || '');
+
+            const expenseCategory = categories.find(cat => cat.id === expense.category_id);
+            setCategory(expenseCategory ? expenseCategory.name : '');
+            setSelectedCategoryId(expense.category_id || '');
+
             setSubcategory(expense.subcategory || "");
             setDescription(expense.description || "");
             setCreatedAt(expense.created_at ? expense.created_at.slice(0, 10) : '');
-            setModeOfPayment(expense.mode_of_payment || ""); 
+            setModeOfPayment(expense.mode_of_payment || "");
+            setIsRecurring(typeof expense.is_recurring !== 'undefined' ? (expense.is_recurring ? 'yes' : 'no') : '');
+            setRecurringType(expense.recurring_type || '');
         } else {
             setTitle('');
             setAmount('');
             setCategory('');
+            setSelectedCategoryId('');
             setSubcategory("");
             setDescription("");
             setCreatedAt(new Date().toISOString().slice(0, 10));
             setModeOfPayment("");
+            setIsRecurring('');
+            setRecurringType('');
         }
         setShowModal(true);
     };
@@ -129,6 +157,7 @@ export default function Expenses() {
         setTitle('');
         setAmount('');
         setCategory('');
+        setSelectedCategoryId('');
         setSubcategory("");
         setDescription("");
         setEditExpense(null);
@@ -140,7 +169,19 @@ export default function Expenses() {
             alert('Please enter a valid title and amount.');
             return;
         }
-      
+
+        if (!selectedCategoryId) {
+            alert('Please select a category.');
+            return;
+        }
+        if (!isRecurring) {
+            alert('Please select recurring status.');
+            return;
+        }
+        if (isRecurring === 'yes' && !recurringType) {
+            alert('Please select recurring type.');
+            return;
+        }
         const formattedAmount = parseFloat(parseFloat(amount).toFixed(2));
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -151,19 +192,31 @@ export default function Expenses() {
         if (editExpense) {
             result = await supabase
                 .from('expenses')
-                .update({ title, amount: formattedAmount, category, subcategory, description, created_at: createdAt, mode_of_payment: modeOfPayment }) // <-- add mode_of_payment
+                .update({
+                    title,
+                    amount: formattedAmount,
+                    category_id: selectedCategoryId,
+                    subcategory,
+                    description,
+                    created_at: createdAt,
+                    mode_of_payment: modeOfPayment,
+                    is_recurring: isRecurring === 'yes',
+                    recurring_type: isRecurring === 'yes' ? recurringType : null
+                })
                 .eq('id', editExpense.id);
         } else {
             result = await supabase.from('expenses').insert([
                 {
                     title,
                     amount: formattedAmount,
-                    category,
+                    category_id: selectedCategoryId,
                     subcategory,
                     description,
                     created_at: createdAt,
                     user_id: user.id,
-                    mode_of_payment: modeOfPayment // <-- add mode_of_payment
+                    mode_of_payment: modeOfPayment,
+                    is_recurring: isRecurring === 'yes',
+                    recurring_type: isRecurring === 'yes' ? recurringType : null
                 },
             ]);
         }
@@ -172,7 +225,7 @@ export default function Expenses() {
             return;
         }
         closeModal();
-       
+
         const { data, error } = await supabase
             .from('expenses')
             .select('*')
@@ -211,7 +264,6 @@ export default function Expenses() {
     const months = Array.from(new Set(expenses.map(exp => exp.created_at.slice(0, 7)))).sort((a, b) => b.localeCompare(a));
     const uniqueDates = Array.from(new Set(expenses.map(exp => exp.created_at.slice(0, 10))));
 
-   
     useEffect(() => {
         const fetchCategories = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -226,7 +278,6 @@ export default function Expenses() {
         fetchCategories();
     }, []);
 
-
     useEffect(() => {
         const fetchAllSubcategories = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -238,7 +289,6 @@ export default function Expenses() {
         };
         fetchAllSubcategories();
     }, []);
-
 
     const filteredSubcategories = useMemo(() => {
         if (!category) return [];
@@ -277,68 +327,68 @@ export default function Expenses() {
     }, []);
 
     const isCurrentMonth = (() => {
-      const now = new Date();
-      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      return month === currentMonth;
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        return month === currentMonth;
     })();
 
     const exportExpensesToCSV = (data, filename = 'expenses.csv') => {
-      if (!data.length) return;
-      const csv = Papa.unparse(data);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+        if (!data.length) return;
+        const csv = Papa.unparse(data);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const exportExpensesToPDF = (data, filename = 'expenses.pdf') => {
-      if (!data.length) return;
-      const doc = new jsPDF();
-      const headers = [Object.keys(data[0])];
-      const rows = data.map(row => headers[0].map(field => row[field] ?? ''));
-      doc.text('Expenses', 14, 15);
-      doc.autoTable({
-        head: headers,
-        body: rows,
-        startY: 20,
-        styles: { fontSize: 8 }
-      });
-      doc.save(filename);
+        if (!data.length) return;
+        const doc = new jsPDF();
+        const headers = [Object.keys(data[0])];
+        const rows = data.map(row => headers[0].map(field => row[field] ?? ''));
+        doc.text('Expenses', 14, 15);
+        doc.autoTable({
+            head: headers,
+            body: rows,
+            startY: 20,
+            styles: { fontSize: 8 }
+        });
+        doc.save(filename);
     };
 
     const useDropdown = () => {
-      const [open, setOpen] = useState(false);
-      const ref = useRef();
-      useEffect(() => {
-        const handleClick = (e) => {
-          if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-        };
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-      }, []);
-      return [open, setOpen, ref];
+        const [open, setOpen] = useState(false);
+        const ref = useRef();
+        useEffect(() => {
+            const handleClick = (e) => {
+                if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+            };
+            document.addEventListener('mousedown', handleClick);
+            return () => document.removeEventListener('mousedown', handleClick);
+        }, []);
+        return [open, setOpen, ref];
     };
 
     function FilterDropdown({ children }) {
-      const [open, setOpen, ref] = useDropdown();
-      return (
-        <span ref={ref} style={{ position: 'relative', marginLeft: 4 }}>
-          <button type="button" className="btn btn-link p-0" onClick={e => { e.stopPropagation(); setOpen(o => !o); }}>
-            <i className="bi bi-funnel"></i>
-          </button>
-          {open && (
-            <div style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #ccc', borderRadius: 4, padding: 8, minWidth: 120, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-              {children}
-            </div>
-          )}
-        </span>
-      );
+        const [open, setOpen, ref] = useDropdown();
+        return (
+            <span ref={ref} style={{ position: 'relative', marginLeft: 4 }}>
+                <button type="button" className="btn btn-link p-0" onClick={e => { e.stopPropagation(); setOpen(o => !o); }}>
+                    <i className="bi bi-funnel"></i>
+                </button>
+                {open && (
+                    <div style={{ position: 'absolute', zIndex: 10, background: '#fff', border: '1px solid #ccc', borderRadius: 4, padding: 8, minWidth: 120, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                        {children}
+                    </div>
+                )}
+            </span>
+        );
     }
 
     return (
@@ -373,9 +423,9 @@ export default function Expenses() {
                                 <label className="form-label mb-1">End Date</label>
                                 <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} aria-label="End Date" />
                             </div>
-                    
+
                             <div className="col-12 col-md-auto ms-auto d-flex justify-content-end gap-2 mt-2 mt-md-0 align-items-end flex-wrap flex-md-nowrap">
-                               
+
                                 <button
                                     className="btn btn-outline-success"
                                     onClick={() => exportExpensesToCSV(sortedExpenses)}
@@ -383,7 +433,7 @@ export default function Expenses() {
                                 >
                                     <i className="bi bi-file-earmark-spreadsheet me-1"></i> CSV
                                 </button>
-                               
+
                                 <button
                                     className="btn btn-outline-danger"
                                     onClick={() => exportExpensesToPDF(sortedExpenses)}
@@ -391,15 +441,15 @@ export default function Expenses() {
                                 >
                                     <i className="bi bi-file-earmark-pdf me-1"></i> PDF
                                 </button>
-                               
+
                                 {(
                                     (year || date || startDate || endDate || filterCategory || filterSubcategory || filterAmountMin || filterAmountMax || filterModeOfPayment || filterRecurring) ||
                                     (month && !isCurrentMonth)
                                 ) && (
-                                    <button className="btn btn-outline-secondary btn-sm" onClick={() => { setYear(''); setMonth(''); setDate(''); setStartDate(''); setEndDate(''); setFilterCategory(''); setFilterSubcategory(''); setFilterAmountMin(''); setFilterAmountMax(''); setFilterModeOfPayment(''); setFilterRecurring(''); }}>
-                                        Clear Filters
-                                    </button>
-                                )}
+                                        <button className="btn btn-outline-secondary btn-sm" onClick={() => { setYear(''); setMonth(''); setDate(''); setStartDate(''); setEndDate(''); setFilterCategory(''); setFilterSubcategory(''); setFilterAmountMin(''); setFilterAmountMax(''); setFilterModeOfPayment(''); setFilterRecurring(''); }}>
+                                            Clear Filters
+                                        </button>
+                                    )}
                                 <button className="btn btn-primary btn-sm" onClick={() => openModal()}>
                                     <i className="bi bi-plus-lg me-1"></i> Add Expense
                                 </button>
@@ -427,78 +477,81 @@ export default function Expenses() {
                                             <thead className="table-light">
                                                 <tr>
                                                     <th style={{ width: '18%' }}>
-                                                      Date
-                                                      <FilterDropdown>
-                                                        <input type="date" className="form-control form-control-sm" value={date} onChange={e => setDate(e.target.value)} />
-                                                      </FilterDropdown>
+                                                        Date
+                                                        <FilterDropdown>
+                                                            <input type="date" className="form-control form-control-sm" value={date} onChange={e => setDate(e.target.value)} />
+                                                        </FilterDropdown>
                                                     </th>
                                                     <th style={{ width: '18%' }}>
-                                                      Category
-                                                      <FilterDropdown>
-                                                        <select className="form-select form-select-sm" value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setFilterSubcategory(''); }}>
-                                                          <option value="">All</option>
-                                                          {categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
-                                                        </select>
-                                                      </FilterDropdown>
+                                                        Category
+                                                        <FilterDropdown>
+                                                            <select className="form-select form-select-sm" value={filterCategory} onChange={e => { setFilterCategory(e.target.value); setFilterSubcategory(''); }}>
+                                                                <option value="">All</option>
+                                                                {categories.map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
+                                                            </select>
+                                                        </FilterDropdown>
                                                     </th>
                                                     <th className="d-none d-md-table-cell" style={{ width: '16%' }}>
-                                                      Subcategory
-                                                      <FilterDropdown>
-                                                        <select className="form-select form-select-sm" value={filterSubcategory} onChange={e => setFilterSubcategory(e.target.value)} disabled={!filterCategory}>
-                                                          <option value="">All</option>
-                                                          {filterSubcategory && filterCategory && filterSubcategories.map(sub => (
-                                                            <option key={sub.name} value={sub.name}>{sub.name}</option>
-                                                          ))}
-                                                        </select>
-                                                      </FilterDropdown>
+                                                        Subcategory
+                                                        <FilterDropdown>
+                                                            <select className="form-select form-select-sm" value={filterSubcategory} onChange={e => setFilterSubcategory(e.target.value)} disabled={!filterCategory}>
+                                                                <option value="">All</option>
+                                                                {filterCategory && filterSubcategories.map(sub => (
+                                                                    <option key={sub.name} value={sub.name}>{sub.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </FilterDropdown>
                                                     </th>
                                                     <th className="d-none d-sm-table-cell" style={{ width: '7%' }}>
-                                                      Description
+                                                        Description
                                                     </th>
                                                     <th className="text-center" style={{ width: '10%' }}>
-                                                      Amount
-                                                      <FilterDropdown>
-                                                        <div className="d-flex gap-1">
-                                                          <input type="number" className="form-control form-control-sm" placeholder="Min" value={filterAmountMin} onChange={e => setFilterAmountMin(e.target.value)} style={{ width: 60 }} />
-                                                          <input type="number" className="form-control form-control-sm" placeholder="Max" value={filterAmountMax} onChange={e => setFilterAmountMax(e.target.value)} style={{ width: 60 }} />
-                                                        </div>
-                                                      </FilterDropdown>
+                                                        Amount
+                                                        <FilterDropdown>
+                                                            <div className="d-flex gap-1">
+                                                                <input type="number" className="form-control form-control-sm" placeholder="Min" value={filterAmountMin} onChange={e => setFilterAmountMin(e.target.value)} style={{ width: 60 }} />
+                                                                <input type="number" className="form-control form-control-sm" placeholder="Max" value={filterAmountMax} onChange={e => setFilterAmountMax(e.target.value)} style={{ width: 60 }} />
+                                                            </div>
+                                                        </FilterDropdown>
                                                     </th>
                                                     <th className="text-center d-none d-sm-table-cell" style={{ width: '10%' }}>
-                                                      Recurring
-                                                      <FilterDropdown>
-                                                        <select className="form-select form-select-sm" value={filterRecurring} onChange={e => setFilterRecurring(e.target.value)}>
-                                                          <option value="">All</option>
-                                                          <option value="yes">Yes</option>
-                                                          <option value="no">No</option>
-                                                        </select>
-                                                      </FilterDropdown>
+                                                        Recurring
+                                                        <FilterDropdown>
+                                                            <select className="form-select form-select-sm" value={filterRecurring} onChange={e => setFilterRecurring(e.target.value)}>
+                                                                <option value="">All</option>
+                                                                <option value="yes">Yes</option>
+                                                                <option value="no">No</option>
+                                                            </select>
+                                                        </FilterDropdown>
                                                     </th>
                                                     <th className="text-center d-none d-sm-table-cell" style={{ width: '18%' }}>
-                                                      Mode of Payment
-                                                      <FilterDropdown>
-                                                        <select className="form-select form-select-sm" value={filterModeOfPayment} onChange={e => setFilterModeOfPayment(e.target.value)}>
-                                                          <option value="">All</option>
-                                                          <option value="cash">Cash</option>
-                                                          <option value="credit_card">Credit Card</option>
-                                                          <option value="debit_card">Debit Card</option>
-                                                          <option value="upi">UPI</option>
-                                                          <option value="net_banking">Net Banking</option>
-                                                          <option value="wallet">Wallet</option>
-                                                        </select>
-                                                      </FilterDropdown>
+                                                        Mode of Payment
+                                                        <FilterDropdown>
+                                                            <select className="form-select form-select-sm" value={filterModeOfPayment} onChange={e => setFilterModeOfPayment(e.target.value)}>
+                                                                <option value="">All</option>
+                                                                <option value="cash">Cash</option>
+                                                                <option value="credit_card">Credit Card</option>
+                                                                <option value="debit_card">Debit Card</option>
+                                                                <option value="upi">UPI</option>
+                                                                <option value="net_banking">Net Banking</option>
+                                                                <option value="wallet">Wallet</option>
+                                                            </select>
+                                                        </FilterDropdown>
                                                     </th>
                                                     <th className="text-center" style={{ width: '12%' }}>
-                                                      Actions
+                                                        Actions
                                                     </th>
-                                                  </tr>
+                                                </tr>
                                             </thead>
                                             <tbody>
                                                 {sortedExpenses.length > 0 ? (
                                                     sortedExpenses.map((expense) => (
                                                         <tr key={expense.id}>
                                                             <td style={{ wordBreak: 'break-word' }}>{expense.created_at.slice(0, 10)}</td>
-                                                            <td style={{ wordBreak: 'break-word' }}>{expense.category}</td>
+                                                            {/* MODIFIED: Display category name by looking up from categories state using expense.category_id */}
+                                                            <td style={{ wordBreak: 'break-word' }}>
+                                                                {categories.find(cat => cat.id === expense.category_id)?.name || 'N/A'}
+                                                            </td>
                                                             <td className="d-none d-md-table-cell" style={{ wordBreak: 'break-word' }}>{expense.subcategory}</td>
                                                             <td className="d-none d-sm-table-cell text-truncate" style={{ maxWidth: 120, wordBreak: 'break-word' }}>{expense.description}</td>
                                                             <td className="fw-bold text-primary text-center" style={{ fontSize: '1.1rem', wordBreak: 'break-word' }}>
@@ -557,101 +610,142 @@ export default function Expenses() {
                                     </div>
                                     <div className="modal-body">
                                         <form onSubmit={handleSubmit}>
-                                            <input
-                                                type="text"
-                                                placeholder="Title"
-                                                value={title}
-                                                onChange={(e) => setTitle(e.target.value)}
-                                                required
-                                                className="form-control mb-2"
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="Amount"
-                                                value={amount}
-                                                onChange={(e) => setAmount(e.target.value)}
-                                                required
-                                                className="form-control mb-2"
-                                            />
-                                            <select
-                                                value={category}
-                                                onChange={(e) => setCategory(e.target.value)}
-                                                required
-                                                className="form-select mb-2 category-select"
-                                            >
-                                                <option value="">Select Category</option>
-                                                {categories.map(category => (
-                                                    <option key={category.id} value={category.name}>{category.name}</option>
-                                                ))}
-                                            </select>
-                                            <select
-                                                value={subcategory}
-                                                onChange={(e) => setSubcategory(e.target.value)}
-                                                required
-                                                className="form-select mb-2 subcategory-select"
-                                                disabled={!category || !categories.find(c => c.name === category)}
-                                            >
-                                                {category && categories.find(c => c.name === category) ? (
-                                                    <>
-                                                        <option value="">Select Subcategory</option>
-                                                        {allSubcategories
-                                                            .filter(sub => sub.category_id === categories.find(c => c.name === category).id)
-                                                            .map(sub => (
-                                                                <option key={sub.name} value={sub.name}>{sub.name}</option>
-                                                            ))}
-                                                    </>
-                                                ) : (
-                                                    <option value="" disabled>No subcategories available</option>
-                                                )}
-                                            </select>
-                                            <input
-                                                type="date"
-                                                className="form-control mb-2"
-                                                value={createdAt}
-                                                onChange={e => setCreatedAt(e.target.value)}
-                                                aria-label="Select Date"
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="Description (optional)"
-                                                value={description}
-                                                onChange={e => setDescription(e.target.value)}
-                                                className="form-control mb-2"
-                                            />
-                                            <select
-                                                value={modeOfPayment}
-                                                onChange={e => setModeOfPayment(e.target.value)}
-                                                required
-                                                className="form-select mb-2">
-                                                <option value="">Select Mode of Payment</option>
-                                                <option value="cash">Cash</option>
-                                                <option value="credit_card">Credit Card</option>
-                                                <option value="debit_card">Debit Card</option>
-                                                <option value="upi">UPI</option>
-                                                <option value="net_banking">Net Banking</option>
-                                                <option value="wallet">Wallet</option>
-                                            </select>
-                                            <div className="mb-2">
-                                                <label className="form-label">Recurring</label>
+                                            <div className="mb-3">
+                                                <label htmlFor="title" className="form-label">Title</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    id="title"
+                                                    value={title}
+                                                    onChange={(e) => setTitle(e.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label htmlFor="amount" className="form-label">Amount</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    id="amount"
+                                                    value={amount}
+                                                    onChange={(e) => setAmount(e.target.value)}
+                                                    step="0.01"
+                                                    required
+                                                />
+                                            </div>
+                                            
+                                            <div className="mb-3">
+                                                <label htmlFor="categorySelect" className="form-label">Category</label>
                                                 <select
                                                     className="form-select"
-                                                    value={editExpense?.recurring_type || ''}
-                                                    onChange={e => {
-                                                        if (editExpense) {
-                                                            setEditExpense({ ...editExpense, recurring_type: e.target.value });
-                                                        }
+                                                    id="categorySelect"
+                                                    value={category} 
+                                                    onChange={(e) => {
+                                                        const selectedCategoryName = e.target.value;
+                                                        setCategory(selectedCategoryName); 
+                                                        const foundCategory = categories.find(cat => cat.name === selectedCategoryName);
+                                                        setSelectedCategoryId(foundCategory ? foundCategory.id : '');
+                                                        setSubcategory('');
                                                     }}
+                                                    required
                                                 >
-                                                    <option value="">No</option>
-                                                    <option value="weekly">Weekly</option>
-                                                    <option value="monthly">Monthly</option>
-                                                    <option value="yearly">Yearly</option>
+                                                    <option value="">Select a category</option>
+                                                    {categories.map((cat) => (
+                                                        <option key={cat.id} value={cat.name}>
+                                                            {cat.name}
+                                                        </option>
+                                                    ))}
                                                 </select>
                                             </div>
-                                            <div className="modal-actions d-flex justify-content-between">
-                                                <button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
-                                                <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                                           
+                                            <div className="mb-3">
+                                                <label htmlFor="subcategorySelect" className="form-label">Subcategory</label>
+                                                <select
+                                                    className="form-select"
+                                                    id="subcategorySelect"
+                                                    value={subcategory}
+                                                    onChange={(e) => setSubcategory(e.target.value)}
+                                                    disabled={!selectedCategoryId || filteredSubcategories.length === 0}
+                                                >
+                                                    <option value="">Select a subcategory (optional)</option>
+                                                    {filteredSubcategories.map((sub) => (
+                                                        <option key={sub.name} value={sub.name}>
+                                                            {sub.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
+                                            <div className="mb-3">
+                                                <label htmlFor="description" className="form-label">Description</label>
+                                                <textarea
+                                                    className="form-control"
+                                                    id="description"
+                                                    rows="3"
+                                                    value={description}
+                                                    onChange={(e) => setDescription(e.target.value)}
+                                                ></textarea>
+                                            </div>
+                                            <div className="mb-3">
+                                                <label htmlFor="createdAt" className="form-label">Date</label>
+                                                <input
+                                                    type="date"
+                                                    className="form-control"
+                                                    id="createdAt"
+                                                    value={createdAt}
+                                                    onChange={(e) => setCreatedAt(e.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label htmlFor="modeOfPayment" className="form-label">Mode of Payment</label>
+                                                <select
+                                                    className="form-select"
+                                                    id="modeOfPayment"
+                                                    value={modeOfPayment}
+                                                    onChange={(e) => setModeOfPayment(e.target.value)}
+                                                >
+                                                    <option value="">Select mode of payment</option>
+                                                    <option value="cash">Cash</option>
+                                                    <option value="credit_card">Credit Card</option>
+                                                    <option value="debit_card">Debit Card</option>
+                                                    <option value="upi">UPI</option>
+                                                    <option value="net_banking">Net Banking</option>
+                                                    <option value="wallet">Wallet</option>
+                                                </select>
+                                            </div>
+                                            <div className="mb-3">
+                                                <label htmlFor="recurring" className="form-label">Recurring</label>
+                                                <select
+                                                    className="form-select"
+                                                    id="recurring"
+                                                    value={isRecurring}
+                                                    onChange={e => setIsRecurring(e.target.value)}
+                                                    required
+                                                >
+                                                    <option value="">Select recurring status</option>
+                                                    <option value="yes">Yes</option>
+                                                    <option value="no">No</option>
+                                                </select>
+                                            </div>
+                                            {isRecurring === 'yes' && (
+                                                <div className="mb-3">
+                                                    <label htmlFor="recurringType" className="form-label">Recurring Type</label>
+                                                    <select
+                                                        className="form-select"
+                                                        id="recurringType"
+                                                        value={recurringType}
+                                                        onChange={e => setRecurringType(e.target.value)}
+                                                        required
+                                                    >
+                                                        <option value="">Select type</option>
+                                                        <option value="monthly">Monthly</option>
+                                                        <option value="weekly">Weekly</option>
+                                                        <option value="yearly">Yearly</option>
+                                                        <option value="daily">Daily</option>
+                                                    </select>
+                                                </div>
+                                            )}
+                                            <button type="submit" className="btn btn-primary w-100">{editExpense ? 'Update Expense' : 'Add Expense'}</button>
                                         </form>
                                     </div>
                                 </div>
@@ -661,5 +755,5 @@ export default function Expenses() {
                 )}
             </div>
         </>
-    )
+    );
 }
