@@ -1,10 +1,10 @@
-import '../../styles/custom-bootstrap.scss';
 import Link from 'next/link';
 import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
 import BootstrapClient from '../../components/BootstrapClient';
 import Profile from '../../components/profile';
 import DashboardNavbarClient from '../../components/navbar.jsx';
+
 
 export default async function DashboardLayout({ children, modal }) {
   const supabase = await createClient();

@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../utils/supabase/client';
-import '../../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../../components/BootstrapClient';
 
 export default function CategoriesPage() {
@@ -43,26 +42,20 @@ export default function CategoriesPage() {
             .select('id, name, subcategories(id, name)')
             .eq('user_id', user.id)
             .order("name", { ascending: true });
-        if (error) {
-            console.error('Error fetching categories:', error);
-        } else {
+        if (!error) {
             setCategories(data);
         }
     }
 
     async function addCategory() {
         if (!user || !user.id || !newCategoryName.trim()) {
-            console.error('Missing user or user.id or newCategoryName');
             return;
         }
         const response = await supabase
             .from('categories')
             .insert([{ name: newCategoryName, user_id: user.id }])
             .select();
-        if (response.error || !response.data) {
-            console.error('Error adding category:', response.error);
-            if (response.data) console.log('Response data:', response.data);
-        } else {
+        if (!response.error && response.data) {
             setCategories([...categories, ...response.data]);
             setNewCategoryName("");
         }
@@ -77,19 +70,16 @@ export default function CategoriesPage() {
             .eq('user_id', user.id)
             .single();
         if (!parentCategory) {
-            console.error('Parent category not found');
             return;
         }
         const { error } = await supabase
             .from("subcategories")
             .insert([{ name: newSubcategoryName.trim(), category_id: newSubcategoryParentId, user_id: user.id }]);
-        if (error) {
-            console.error("Error adding subcategory:", error);
-            return;
+        if (!error) {
+            setNewSubcategoryName("");
+            setNewSubcategoryParentId(null);
+            fetchCategories();
         }
-        setNewSubcategoryName("");
-        setNewSubcategoryParentId(null);
-        fetchCategories();
     }
 
     async function updateCategory(id, newName, oldName) {
@@ -99,18 +89,16 @@ export default function CategoriesPage() {
             .update({ name: newName.trim() })
             .eq('id', id)
             .eq('user_id', user.id);
-        if (error) {
-            console.error('Error updating category:', error);
-            return;
+        if (!error) {
+            await supabase
+                .from('expenses')
+                .update({ category: newName.trim() })
+                .eq('category', oldName)
+                .eq('user_id', user.id);
+            setEditingCategoryId(null);
+            setEditCategoryName("");
+            fetchCategories();
         }
-        await supabase
-            .from('expenses')
-            .update({ category: newName.trim() })
-            .eq('category', oldName)
-            .eq('user_id', user.id);
-        setEditingCategoryId(null);
-        setEditCategoryName("");
-        fetchCategories();
     }
 
     async function updateSubcategory(id, newName) {
@@ -120,11 +108,10 @@ export default function CategoriesPage() {
             .update({ name: newName.trim() })
             .eq('id', id)
             .eq('user_id', user.id);
-        if (error) {
-            console.error('Error updating subcategory:', error);
+        if (!error) {
+            setEditingSubcategoryId(null);
+            fetchCategories();
         }
-        setEditingSubcategoryId(null);
-        fetchCategories();
     }
 
     async function deleteCategory(id) {
@@ -135,7 +122,6 @@ export default function CategoriesPage() {
             .eq("category_id", id)
             .eq("user_id", user.id);
         if (subError) {
-            console.error("Error deleting subcategories:", subError);
             return;
         }
         const { error } = await supabase
@@ -143,11 +129,9 @@ export default function CategoriesPage() {
             .delete()
             .eq('id', id)
             .eq('user_id', user.id);
-        if (error) {
-            console.error('Error deleting category:', error);
-            return;
+        if (!error) {
+            fetchCategories();
         }
-        fetchCategories();
     }
     async function deleteSubcategory(id) {
         if (!user) return;
@@ -156,11 +140,9 @@ export default function CategoriesPage() {
             .delete()
             .eq("id", id)
             .eq("user_id", user.id);
-        if (error) {
-            console.error("Error deleting subcategory:", error);
-            return;
+        if (!error) {
+            fetchCategories();
         }
-        fetchCategories();
     }
 
     async function fetchSubcategoryTotals() {
@@ -169,16 +151,14 @@ export default function CategoriesPage() {
             .from('expenses')
             .select('subcategory, amount')
             .eq('user_id', user.id);
-        if (error || !Array.isArray(data)) {
-            console.error('Error fetching expenses:', error, data);
-            return;
+        if (!error && Array.isArray(data)) {
+            const totals = {};
+            data.forEach(exp => {
+                if (!totals[exp.subcategory]) totals[exp.subcategory] = 0;
+                totals[exp.subcategory] += exp.amount;
+            });
+            setSubcategoryTotals(totals);
         }
-        const totals = {};
-        data.forEach(exp => {
-            if (!totals[exp.subcategory]) totals[exp.subcategory] = 0;
-            totals[exp.subcategory] += exp.amount;
-        });
-        setSubcategoryTotals(totals);
     }
 
     async function fetchCategoryTotals() {
@@ -187,35 +167,36 @@ export default function CategoriesPage() {
             .from('expenses')
             .select('category_id, amount, categories(name)')
             .eq('user_id', user.id);
-        if (error || !Array.isArray(data)) {
-            console.error('Error fetching category totals:', error, data);
-            return;
+        if (!error && Array.isArray(data)) {
+            const totals = {};
+            data.forEach(exp => {
+                const catName = exp.categories?.name || 'Unknown';
+                if (!totals[catName]) totals[catName] = 0;
+                totals[catName] += exp.amount;
+            });
+            setCategoryTotals(totals);
         }
-        const totals = {};
-        data.forEach(exp => {
-            const catName = exp.categories?.name || 'Unknown';
-            if (!totals[catName]) totals[catName] = 0;
-            totals[catName] += exp.amount;
-        });
-        setCategoryTotals(totals);
     }
 
     return (
         <>
             <BootstrapClient />
-            <div className="container-fluid mt-3 text-center position-relative">
-                <h2 className="mb-4 text-primary">Categories</h2>
-                <div className="position-absolute top-0 end-0 mt-2 me-2 d-flex flex-row flex-wrap gap-2" style={{ zIndex: 10 }}>
-                    <button className="btn btn-outline-primary flex-shrink-0 d-flex align-items-center" style={{ minWidth: 110, fontSize: '0.95rem' }} onClick={() => setShowAddCategoryModal(true)}>
-                        <i className="bi bi-plus-lg me-1"></i> <span className="d-none d-sm-inline">Add Category</span>
-                    </button>
-                    <button className="btn btn-outline-primary flex-shrink-0 d-flex align-items-center" style={{ minWidth: 110, fontSize: '0.95rem' }} onClick={() => setShowAddSubcategoryModal(true)}>
-                        <i className="bi bi-plus-lg me-1"></i> <span className="d-none d-sm-inline">Add Subcategory</span>
-                    </button>
+            <div className="container-fluid mt-3 text-center position-relative px-1 px-sm-3">
+                <div className="d-flex flex-column flex-sm-row align-items-center justify-content-between mb-2 gap-2 gap-sm-0" style={{ position: 'relative' }}>
+                    <h2 className="mb-0 text-primary w-100 text-center fw-bold" style={{ fontSize: 'clamp(1.3rem, 5vw, 2.2rem)', letterSpacing: '0.5px', textShadow: '0 1px 2px #e3e3e3' }}>Categories</h2>
+                    <div className="d-flex flex-row flex-wrap gap-2 mt-2 mt-sm-0 justify-content-center justify-content-sm-end w-100 w-sm-auto" style={{ zIndex: 10 }}>
+                        <button className="btn btn-outline-primary flex-shrink-0 d-flex align-items-center justify-content-center shadow-sm category-action-btn" style={{ minWidth: 120, fontSize: '1rem', padding: '0.45rem 0.9rem', borderRadius: 8, transition: 'background 0.2s, color 0.2s' }} onClick={() => setShowAddCategoryModal(true)}>
+                            <i className="bi bi-plus-lg me-1"></i> Add Category
+                        </button>
+                        <button className="btn btn-outline-primary flex-shrink-0 d-flex align-items-center justify-content-center shadow-sm category-action-btn" style={{ minWidth: 140, fontSize: '1rem', padding: '0.45rem 0.9rem', borderRadius: 8, transition: 'background 0.2s, color 0.2s' }} onClick={() => setShowAddSubcategoryModal(true)}>
+                            <i className="bi bi-plus-lg me-1"></i> Add Subcategory
+                        </button>
+                    </div>
                 </div>
                 <div className="d-flex justify-content-end gap-2 mb-3" style={{ marginTop: '2.5rem' }}>
                     <button
-                        className={`btn btn-outline-primary btn-sm`}
+                        className={`btn btn-outline-primary btn-sm shadow-sm`}
+                        style={{ fontSize: '0.95rem', padding: '0.32rem 0.8rem', borderRadius: 7, transition: 'background 0.2s, color 0.2s' }}
                         onClick={() => {
                             if (openCategoryIds.length === categories.length) {
                                 setOpenCategoryIds([]);
@@ -227,19 +208,19 @@ export default function CategoriesPage() {
                         {openCategoryIds.length === categories.length ? 'Collapse All' : 'Open All'}
                     </button>
                 </div>
-                <div className="row justify-content-center">
+                <div className="row g-3 g-sm-4">
                     {categories.map(category => (
-                        <div key={category.id} className="col-md-5 mx-2 mb-4">
-                            <div className="mb-3 d-flex align-items-center justify-content-between bg-light rounded p-3 shadow-sm">
-                                <div className="d-flex align-items-center">
-                                    <strong className="text-primary me-3" style={{ fontSize: '1.94rem' }}>
-                                        {category.name}
-                                        <span className="fw-bold ms-2" style={{ fontSize: '1.16rem' }}>
+                        <div key={category.id} className="col-12 col-sm-10 col-md-5 mb-3 px-1 px-sm-2 mx-auto">
+                            <div className="mb-2 d-flex align-items-center justify-content-between bg-white rounded-4 p-3 shadow category-card flex-wrap flex-column flex-sm-row text-start position-relative border border-1 border-light" style={{ minHeight: 70, transition: 'box-shadow 0.2s', boxShadow: '0 2px 10px 0 rgba(0,0,0,0.06)' }}>
+                                <div className="d-flex align-items-center flex-wrap flex-column flex-sm-row w-100">
+                                    <strong className="text-primary me-2 mb-2 mb-sm-0 fw-semibold" style={{ fontSize: '1.25rem', letterSpacing: '0.2px' }}>
+                                        <span className="category-name" style={{ textShadow: '0 1px 2px #f3f3f3' }}>{category.name}</span>
+                                        <span className="fw-bold ms-2 text-success" style={{ fontSize: '1.05rem', textShadow: '0 1px 2px #e3ffe3' }}>
                                             ₹{categoryTotals[category.name] ? categoryTotals[category.name].toFixed(2) : '0.00'}
                                         </span>
                                     </strong>
                                     {category.subcategories && category.subcategories.length > 0 && (
-                                        <span style={{ cursor: 'pointer' }} onClick={() => {
+                                        <span style={{ cursor: 'pointer', marginLeft: 8, color: '#0d6efd', opacity: 0.8 }} onClick={() => {
                                             setOpenCategoryIds(ids => ids.includes(category.id)
                                                 ? ids.filter(id => id !== category.id)
                                                 : [...ids, category.id]);
@@ -250,11 +231,11 @@ export default function CategoriesPage() {
                                         </span>
                                     )}
                                 </div>
-                                <div>
-                                    <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => setEditingCategoryId(category.id)} title="Edit">
+                                <div className="mt-2 mt-sm-0 d-flex gap-2">
+                                    <button className="btn btn-sm btn-outline-secondary shadow-sm" style={{ borderRadius: 7 }} onClick={() => setEditingCategoryId(category.id)} title="Edit">
                                         <i className="bi bi-pencil"></i>
                                     </button>
-                                    <button className="btn btn-sm btn-outline-danger" onClick={() => deleteCategory(category.id)} title="Delete">
+                                    <button className="btn btn-sm btn-outline-danger shadow-sm" style={{ borderRadius: 7 }} onClick={() => deleteCategory(category.id)} title="Delete">
                                         <i className="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -262,14 +243,14 @@ export default function CategoriesPage() {
                             {openCategoryIds.includes(category.id) && category.subcategories && category.subcategories.length > 0 && (
                                 <ul className="list-group list-group-flush mt-2">
                                     {category.subcategories.map(sub => (
-                                        <li key={sub.id} className="list-group-item border-0 text-secondary text-start d-flex justify-content-between align-items-center bg-white rounded mb-2 shadow-sm">
-                                            <span>{sub.name}</span>
-                                            <span className="fw-bold">₹{subcategoryTotals[sub.name] ? subcategoryTotals[sub.name].toFixed(2) : '0.00'}</span>
-                                            <span>
-                                                <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => setEditingSubcategoryId(sub.id)} title="Edit">
+                                        <li key={sub.id} className="list-group-item border-0 text-secondary d-flex justify-content-between align-items-center bg-light rounded-3 mb-2 shadow-sm px-3 py-2 subcategory-card" style={{ fontSize: '1.01rem', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.04)' }}>
+                                            <span className="fw-semibold text-dark">{sub.name}</span>
+                                            <span className="fw-bold text-success">₹{subcategoryTotals[sub.name] ? subcategoryTotals[sub.name].toFixed(2) : '0.00'}</span>
+                                            <span className="d-flex gap-2">
+                                                <button className="btn btn-sm btn-outline-secondary shadow-sm" style={{ borderRadius: 7 }} onClick={() => setEditingSubcategoryId(sub.id)} title="Edit">
                                                     <i className="bi bi-pencil"></i>
                                                 </button>
-                                                <button className="btn btn-sm btn-outline-danger" onClick={() => deleteSubcategory(sub.id)} title="Delete">
+                                                <button className="btn btn-sm btn-outline-danger shadow-sm" style={{ borderRadius: 7 }} onClick={() => deleteSubcategory(sub.id)} title="Delete">
                                                     <i className="bi bi-trash"></i>
                                                 </button>
                                             </span>
@@ -416,6 +397,22 @@ export default function CategoriesPage() {
                     </div>
                 </div>
             )}
+            {/* Add hover effect for action buttons and cards */}
+            <style jsx global>{`
+.category-action-btn:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover, .btn-outline-danger:hover {
+    background: #eaf4ff !important;
+    color: #0d6efd !important;
+    border-color: #b6d4fe !important;
+}
+.category-card:hover {
+    box-shadow: 0 4px 18px 0 rgba(13,110,253,0.10);
+    border-color: #b6d4fe;
+}
+.subcategory-card:hover {
+    box-shadow: 0 2px 8px 0 rgba(25,135,84,0.10);
+    background: #f6fff6 !important;
+}
+`}</style>
         </>
     );
 }

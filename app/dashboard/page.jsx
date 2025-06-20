@@ -11,9 +11,8 @@ export default function Dashboard() {
 	const [editExpense, setEditExpense] = useState(null);
 	const [title, setTitle] = useState('');
 	const [amount, setAmount] = useState('');
-	const [category, setCategory] = useState('');
+	const [categoryId, setCategoryId] = useState('');
 	const [subcategory, setSubcategory] = useState("");
-	const [description, setDescription] = useState("");
 	const [totals, setTotals] = useState({ daily: 0, monthly: 0 });
 	const [categories, setCategories] = useState([]);
 	const [subcategories, setSubcategories] = useState([]);
@@ -22,6 +21,8 @@ export default function Dashboard() {
 	const [recurringType, setRecurringType] = useState('');
 	const [modeOfPayment, setModeOfPayment] = useState('');
 	const [allSubcategories, setAllSubcategories] = useState([]);
+	const [filteredSubcategories, setFilteredSubcategories] = useState([]);
+	const [isRecurring, setIsRecurring] = useState('no');
 
 	useEffect(() => {
 		const fetchCurrency = async () => {
@@ -60,7 +61,6 @@ export default function Dashboard() {
 			const { data: { user } } = await supabase.auth.getUser();
 			if (!user) return;
 			for (const category of presetcategories) {
-				// Try upsert
 				const { data: insertedCategories, error: catError } = await supabase
 					.from("categories")
 					.upsert(
@@ -76,7 +76,6 @@ export default function Dashboard() {
 					continue;
 				}
 
-				// If no row returned, fetch the category (it already exists)
 				if (!insertedCategory) {
 					const { data: existingCat, error: fetchCatError } = await supabase
 						.from("categories")
@@ -91,25 +90,21 @@ export default function Dashboard() {
 					insertedCategory = existingCat;
 				}
 
-				// Insert subcategories only if any exist
 				if (category.subcategories.length > 0) {
 					const subcatInserts = category.subcategories.map(name => ({
 						name,
 						category_id: insertedCategory.id,
 						user_id: user.id
 					}));
-					const { data: subcatData, error: subcatError, status, statusText } = await supabase
+					await supabase
 						.from("subcategories")
 						.upsert(
 							subcatInserts,
 							{ onConflict: ['category_id', 'name'], ignoreDuplicates: true }
 						);
-
-
 				}
 			}
 
-			// After all inserts, update user flag to true
 			await supabase
 				.from("users")
 				.update({ has_presets: true })
@@ -148,8 +143,8 @@ export default function Dashboard() {
 		setCategories(categoryData || []);
 	};
 	useEffect(() => {
-		if (category) {
-			const selectedCategory = categories.find(cat => cat.name === category);
+		if (categoryId) {
+			const selectedCategory = categories.find(cat => cat.id === categoryId);
 			if (selectedCategory) {
 				const fetchSubcategories = async (categoryId) => {
 					const { data } = await supabase
@@ -165,7 +160,20 @@ export default function Dashboard() {
 			setSubcategories([]);
 			setSubcategory("");
 		}
-	}, [category, categories]);
+	}, [categoryId, categories]);
+
+	useEffect(() => {
+		if (categoryId) {
+			const filtered = allSubcategories.filter(sub => sub.category_id === categoryId);
+			setFilteredSubcategories(filtered);
+			if (!filtered.some(sub => sub.name === subcategory)) {
+				setSubcategory('');
+			}
+		} else {
+			setFilteredSubcategories([]);
+			setSubcategory('');
+		}
+	}, [categoryId, allSubcategories, subcategory]);
 
 	const calculateTotals = (expensesData) => {
 		const today = new Date().toISOString().slice(0, 10);
@@ -196,21 +204,21 @@ export default function Dashboard() {
 		if (expense) {
 			setTitle(expense.title || '');
 			setAmount(expense.amount || '');
-			setCategory(expense.category || '');
-			setSubcategory(expense.subcategory || ""); // <-- set subcategory from expense
-			setDescription(expense.description || "");
+			setCategoryId(expense.category_id || '');
+			setSubcategory(expense.subcategory || "");
 			setCreatedAt(expense.created_at ? expense.created_at.slice(0, 10) : '');
 			setRecurringType(expense.recurring_type || '');
-			setModeOfPayment(expense.mode_of_payment || ""); // <-- also load mode of payment if present
+			setModeOfPayment(expense.mode_of_payment || "");
+			setIsRecurring(expense.recurring_type ? 'yes' : 'no');
 		} else {
 			setTitle('');
 			setAmount('');
-			setCategory('');
-			setSubcategory(""); // <-- reset only on add
-			setDescription("");
+			setCategoryId('');
+			setSubcategory("");
 			setCreatedAt(new Date().toISOString().slice(0, 10));
 			setRecurringType('');
 			setModeOfPayment("");
+			setIsRecurring('no');
 		}
 		setShowModal(true);
 	};
@@ -219,9 +227,8 @@ export default function Dashboard() {
 		setShowModal(false);
 		setTitle('');
 		setAmount('');
-		setCategory('');
+		setCategoryId('');
 		setSubcategory("");
-		setDescription("");
 		setEditExpense(null);
 	};
 
@@ -241,25 +248,24 @@ export default function Dashboard() {
 		if (editExpense) {
 			result = await supabase
 				.from('expenses')
-				.update({ title, amount: parseFloat(amount), category, subcategory, description, created_at: createdAt, recurring_type: recurringType, is_recurring: !!recurringType })
+				.update({ title, amount: parseFloat(amount), category_id: categoryId, subcategory, created_at: createdAt, recurring_type: recurringType, is_recurring: !!recurringType, mode_of_payment: modeOfPayment })
 				.eq('id', editExpense.id);
 		} else {
 			result = await supabase.from('expenses').insert([
 				{
 					title,
 					amount: parseFloat(amount),
-					category,
+					category_id: categoryId,
 					subcategory,
-					description,
 					created_at: createdAt,
 					user_id: user.id,
 					recurring_type: recurringType,
-					is_recurring: !!recurringType
+					is_recurring: !!recurringType,
+					mode_of_payment: modeOfPayment
 				},
 			]);
 		}
 		if (result.error) {
-			console.error('Supabase error:', result.error);
 			alert('Error saving expense: ' + result.error.message);
 			return;
 		}
@@ -287,7 +293,7 @@ export default function Dashboard() {
 	return (
 		<>
 			<BootstrapClient />
-			<div className="container-fluid ">
+			<div className="container-fluid mt-4">
 				<div className="row">
 					<div className="card col-sm-3 mb-3 mb-sm-0 border-0">
 						<h3 className="card-title text-primary">Today's Expenses</h3>
@@ -303,7 +309,7 @@ export default function Dashboard() {
 					</div>
 					<div className="card col-sm-3 border-0">
 						<h2 className="text-primary">Add New Expense</h2>
-						<button className="btn btn-primary" onClick={openModal}>
+						<button className="btn btn-primary" onClick={() => openModal(null)}>
 							<i className="bi bi-plus"></i> Add Expense
 						</button>
 					</div>
@@ -332,9 +338,8 @@ export default function Dashboard() {
 											<h5 className="card-title">{exp.title}</h5>
 											<p className="card-text expense-info">
 												{currencySign(userCurrency)}{Number(exp.amount).toFixed(2)}
-												<span className="badge bg-secondary ms-2">{exp.category}</span>
+												<span className="badge bg-secondary ms-2">{categories.find(cat => cat.id === exp.category_id)?.name || 'Unknown'}</span>
 											</p>
-											<p className="card-text text-truncate" style={{ maxWidth: 120 }}>{exp.description}</p>
 										</div>
 									</div>
 								</div>
@@ -343,7 +348,6 @@ export default function Dashboard() {
 					</div>
 				</div>
 
-				{/* Modal for adding/editing expenses */}
 				{showModal && (
 					<>
 						<div className="modal-backdrop fade show" style={{ zIndex: 1040, position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)' }}></div>
@@ -356,97 +360,121 @@ export default function Dashboard() {
 									</div>
 									<div className="modal-body">
 										<form onSubmit={handleSubmit}>
-											<input
-												type="text"
-												placeholder="Title"
-												value={title}
-												onChange={(e) => setTitle(e.target.value)}
-												required
-												className="form-control mb-2"
-											/>
-											<input
-												type="number"
-												placeholder="Amount"
-												value={amount}
-												onChange={(e) => setAmount(e.target.value)}
-												required
-												className="form-control mb-2"
-											/>
-											<select
-												value={category}
-												onChange={(e) => setCategory(e.target.value)}
-												required
-												className="form-select mb-2 category-select"
-											>
-												<option value="">Select Category</option>
-												{categories.map(category => (
-													<option key={category.id} value={category.name}>{category.name}</option>
-												))}
-											</select>
-											<select
-												value={subcategory}
-												onChange={(e) => setSubcategory(e.target.value)}
-												required
-												className="form-select mb-2 subcategory-select"
-												disabled={!category || !categories.find(c => c.name === category)}
-											>
-												{category && categories.find(c => c.name === category) ? (
-													<>
-														<option value="">Select Subcategory</option>
-														{allSubcategories
-															.filter(sub => sub.category_id === categories.find(c => c.name === category).id)
-															.map(sub => (
-																<option key={sub.name} value={sub.name}>{sub.name}</option>
-															))}
-													</>
-												) : (
-													<option value="" disabled>No subcategories available</option>
-												)}
-											</select>
-											<input
-												type="date"
-												className="form-control mb-2"
-												value={createdAt}
-												onChange={e => setCreatedAt(e.target.value)}
-												aria-label="Select Date"
-											/>
-											<input
-												type="text"
-												placeholder="Description (optional)"
-												value={description}
-												onChange={e => setDescription(e.target.value)}
-												className="form-control mb-2"
-											/>
-											<select
-												value={modeOfPayment}
-												onChange={e => setModeOfPayment(e.target.value)}
-												required
-												className="form-select mb-2">
-												<option value="">Select Mode of Payment</option>
-												<option value="cash">Cash</option>
-												<option value="credit_card">Credit Card</option>
-												<option value="debit_card">Debit Card</option>
-												<option value="upi">UPI</option>
-												<option value="net_banking">Net Banking</option>
-												<option value="wallet">Wallet</option>
-											</select>
-											<div className="mb-2">
-												<label className="form-label">Recurring</label>
+											<div className="mb-1">
+												<label htmlFor="title" className="form-label">Title</label>
+												<input
+													type="text"
+													className="form-control"
+													id="title"
+													value={title}
+													onChange={(e) => setTitle(e.target.value)}
+													required
+												/>
+											</div>
+											<div className="mb-1">
+												<label htmlFor="amount" className="form-label">Amount</label>
+												<input
+													type="number"
+													className="form-control"
+													id="amount"
+													value={amount}
+													onChange={(e) => setAmount(e.target.value)}
+													step="0.01"
+													required
+												/>
+											</div>
+
+											<div className="mb-1">
+												<label htmlFor="categorySelect" className="form-label">Category</label>
 												<select
 													className="form-select"
-													value={recurringType}
-													onChange={e => setRecurringType(e.target.value)}
+													id="categorySelect"
+													value={categoryId}
+													onChange={e => setCategoryId(e.target.value)}
+													required
 												>
-													<option value="">No</option>
-													<option value="weekly">Weekly</option>
-													<option value="monthly">Monthly</option>
-													<option value="yearly">Yearly</option>
+													<option value="">Select a category</option>
+													{categories.map((cat) => (
+														<option key={cat.id} value={cat.id}>{cat.name}</option>
+													))}
 												</select>
 											</div>
-											<div className="modal-actions d-flex justify-content-between">
-												<button type="submit" className="btn btn-primary">{editExpense ? 'Update' : 'Add'}</button>
-												<button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+
+											<div className="mb-1">
+												<label htmlFor="subcategorySelect" className="form-label">Subcategory</label>
+												<select
+													className="form-select"
+													id="subcategorySelect"
+													value={subcategory}
+													onChange={e => setSubcategory(e.target.value)}
+													disabled={!categoryId || filteredSubcategories.length === 0}
+												>
+													<option value="">Select a subcategory</option>
+													{filteredSubcategories.map((sub) => (
+														<option key={sub.name} value={sub.name}>{sub.name}</option>
+													))}
+												</select>
 											</div>
+											<div className="mb-1">
+												<label htmlFor="createdAt" className="form-label">Date</label>
+												<input
+													type="date"
+													className="form-control"
+													id="createdAt"
+													value={createdAt}
+													onChange={(e) => setCreatedAt(e.target.value)}
+													required
+												/>
+											</div>
+											<div className="mb-1">
+												<label htmlFor="modeOfPayment" className="form-label">Mode of Payment</label>
+												<select
+													className="form-select"
+													id="modeOfPayment"
+													value={modeOfPayment}
+													onChange={(e) => setModeOfPayment(e.target.value)}
+												>
+													<option value="">Select mode of payment</option>
+													<option value="cash">Cash</option>
+													<option value="credit_card">Credit Card</option>
+													<option value="debit_card">Debit Card</option>
+													<option value="upi">UPI</option>
+													<option value="net_banking">Net Banking</option>
+													<option value="wallet">Wallet</option>
+												</select>
+											</div>
+											<div className="mb-1">
+												<label htmlFor="recurring" className="form-label">Recurring</label>
+												<select
+													className="form-select"
+													id="recurring"
+													value={isRecurring}
+													onChange={e => setIsRecurring(e.target.value)}
+													required
+												>
+													<option value="yes">Yes</option>
+													<option value="no">No</option>
+												</select>
+											</div>
+											{isRecurring === 'yes' && (
+												<div className="mb-2">
+													<label htmlFor="recurringType" className="form-label">Recurring Type</label>
+													<select
+														className="form-select"
+														id="recurringType"
+														value={recurringType}
+														onChange={e => setRecurringType(e.target.value)}
+														required
+													>
+														<option value="">Select type</option>
+														<option value="monthly">Monthly</option>
+														<option value="weekly">Weekly</option>
+														<option value="yearly">Yearly</option>
+														<option value="daily">Daily</option>
+													</select>
+												</div>
+											)}
+											<button type="submit" className="btn btn-primary w-100">{editExpense ? 'Update Expense' : 'Add Expense'}</button>
 										</form>
 									</div>
 								</div>

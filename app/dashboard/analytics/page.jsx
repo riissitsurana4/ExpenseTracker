@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Bar, Pie, Line, Doughnut } from 'react-chartjs-2';
 import { supabase } from '../../../utils/supabase/client';
 import 'chart.js/auto';
-import '../../../styles/custom-bootstrap.scss';
 
 export default function AnalyticsPage() {
     const [categoryData, setCategoryData] = useState({});

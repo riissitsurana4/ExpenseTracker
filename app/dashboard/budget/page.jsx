@@ -1,9 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../../utils/supabase/client';
-import '../../../styles/custom-bootstrap.scss';
 import BootstrapClient from '../../../components/BootstrapClient';
-import 'bootstrap/dist/css/bootstrap.min.css';
 
 const formatDateToISO = (date) => {
   const year = date.getFullYear();

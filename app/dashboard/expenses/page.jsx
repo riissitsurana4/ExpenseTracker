@@ -1,12 +1,11 @@
 'use client'
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '../../../utils/supabase/client';
-import '../../../styles/custom-bootstrap.scss';
-import BootstrapClient from '../../../components/BootstrapClient';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import Papa from 'papaparse';
+import BootstrapClient from '../../../components/BootstrapClient';
 
 export default function Expenses() {
     const [expenses, setExpenses] = useState([]);
@@ -23,7 +22,6 @@ export default function Expenses() {
     const [category, setCategory] = useState('');
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [subcategory, setSubcategory] = useState("");
-    const [description, setDescription] = useState("");
     const [createdAt, setCreatedAt] = useState('');
     const [categories, setCategories] = useState([]);
     const [subcategories, setSubcategories] = useState([]);
@@ -133,7 +131,6 @@ export default function Expenses() {
             setSelectedCategoryId(expense.category_id || '');
 
             setSubcategory(expense.subcategory || "");
-            setDescription(expense.description || "");
             setCreatedAt(expense.created_at ? expense.created_at.slice(0, 10) : '');
             setModeOfPayment(expense.mode_of_payment || "");
             setIsRecurring(typeof expense.is_recurring !== 'undefined' ? (expense.is_recurring ? 'yes' : 'no') : '');
@@ -144,7 +141,6 @@ export default function Expenses() {
             setCategory('');
             setSelectedCategoryId('');
             setSubcategory("");
-            setDescription("");
             setCreatedAt(new Date().toISOString().slice(0, 10));
             setModeOfPayment("");
             setIsRecurring('');
@@ -159,7 +155,6 @@ export default function Expenses() {
         setCategory('');
         setSelectedCategoryId('');
         setSubcategory("");
-        setDescription("");
         setEditExpense(null);
     };
 
@@ -197,7 +192,6 @@ export default function Expenses() {
                     amount: formattedAmount,
                     category_id: selectedCategoryId,
                     subcategory,
-                    description,
                     created_at: createdAt,
                     mode_of_payment: modeOfPayment,
                     is_recurring: isRecurring === 'yes',
@@ -211,7 +205,6 @@ export default function Expenses() {
                     amount: formattedAmount,
                     category_id: selectedCategoryId,
                     subcategory,
-                    description,
                     created_at: createdAt,
                     user_id: user.id,
                     mode_of_payment: modeOfPayment,
@@ -502,9 +495,6 @@ export default function Expenses() {
                                                             </select>
                                                         </FilterDropdown>
                                                     </th>
-                                                    <th className="d-none d-sm-table-cell" style={{ width: '7%' }}>
-                                                        Description
-                                                    </th>
                                                     <th className="text-center" style={{ width: '10%' }}>
                                                         Amount
                                                         <FilterDropdown>
@@ -553,7 +543,6 @@ export default function Expenses() {
                                                                 {categories.find(cat => cat.id === expense.category_id)?.name || 'N/A'}
                                                             </td>
                                                             <td className="d-none d-md-table-cell" style={{ wordBreak: 'break-word' }}>{expense.subcategory}</td>
-                                                            <td className="d-none d-sm-table-cell text-truncate" style={{ maxWidth: 120, wordBreak: 'break-word' }}>{expense.description}</td>
                                                             <td className="fw-bold text-primary text-center" style={{ fontSize: '1.1rem', wordBreak: 'break-word' }}>
                                                                 {currencySign(userCurrency)}{Number(expense.amount).toFixed(2)}
                                                             </td>
@@ -610,7 +599,7 @@ export default function Expenses() {
                                     </div>
                                     <div className="modal-body">
                                         <form onSubmit={handleSubmit}>
-                                            <div className="mb-3">
+                                            <div className="mb-1">
                                                 <label htmlFor="title" className="form-label">Title</label>
                                                 <input
                                                     type="text"
@@ -621,7 +610,7 @@ export default function Expenses() {
                                                     required
                                                 />
                                             </div>
-                                            <div className="mb-3">
+                                            <div className="mb-1">
                                                 <label htmlFor="amount" className="form-label">Amount</label>
                                                 <input
                                                     type="number"
@@ -633,59 +622,39 @@ export default function Expenses() {
                                                     required
                                                 />
                                             </div>
-                                            
-                                            <div className="mb-3">
+
+                                            <div className="mb-1">
                                                 <label htmlFor="categorySelect" className="form-label">Category</label>
                                                 <select
                                                     className="form-select"
                                                     id="categorySelect"
-                                                    value={category} 
-                                                    onChange={(e) => {
-                                                        const selectedCategoryName = e.target.value;
-                                                        setCategory(selectedCategoryName); 
-                                                        const foundCategory = categories.find(cat => cat.name === selectedCategoryName);
-                                                        setSelectedCategoryId(foundCategory ? foundCategory.id : '');
-                                                        setSubcategory('');
-                                                    }}
+                                                    value={selectedCategoryId}
+                                                    onChange={e => setSelectedCategoryId(e.target.value)}
                                                     required
                                                 >
                                                     <option value="">Select a category</option>
                                                     {categories.map((cat) => (
-                                                        <option key={cat.id} value={cat.name}>
-                                                            {cat.name}
-                                                        </option>
+                                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
                                                     ))}
                                                 </select>
                                             </div>
-                                           
-                                            <div className="mb-3">
+
+                                            <div className="mb-1">
                                                 <label htmlFor="subcategorySelect" className="form-label">Subcategory</label>
                                                 <select
                                                     className="form-select"
                                                     id="subcategorySelect"
                                                     value={subcategory}
-                                                    onChange={(e) => setSubcategory(e.target.value)}
+                                                    onChange={e => setSubcategory(e.target.value)}
                                                     disabled={!selectedCategoryId || filteredSubcategories.length === 0}
                                                 >
-                                                    <option value="">Select a subcategory (optional)</option>
+                                                    <option value="">Select a subcategory</option>
                                                     {filteredSubcategories.map((sub) => (
-                                                        <option key={sub.name} value={sub.name}>
-                                                            {sub.name}
-                                                        </option>
+                                                        <option key={sub.name} value={sub.name}>{sub.name}</option>
                                                     ))}
                                                 </select>
                                             </div>
-                                            <div className="mb-3">
-                                                <label htmlFor="description" className="form-label">Description</label>
-                                                <textarea
-                                                    className="form-control"
-                                                    id="description"
-                                                    rows="3"
-                                                    value={description}
-                                                    onChange={(e) => setDescription(e.target.value)}
-                                                ></textarea>
-                                            </div>
-                                            <div className="mb-3">
+                                            <div className="mb-1">
                                                 <label htmlFor="createdAt" className="form-label">Date</label>
                                                 <input
                                                     type="date"
@@ -696,7 +665,7 @@ export default function Expenses() {
                                                     required
                                                 />
                                             </div>
-                                            <div className="mb-3">
+                                            <div className="mb-1">
                                                 <label htmlFor="modeOfPayment" className="form-label">Mode of Payment</label>
                                                 <select
                                                     className="form-select"
@@ -713,7 +682,7 @@ export default function Expenses() {
                                                     <option value="wallet">Wallet</option>
                                                 </select>
                                             </div>
-                                            <div className="mb-3">
+                                            <div className="mb-1">
                                                 <label htmlFor="recurring" className="form-label">Recurring</label>
                                                 <select
                                                     className="form-select"
@@ -722,13 +691,12 @@ export default function Expenses() {
                                                     onChange={e => setIsRecurring(e.target.value)}
                                                     required
                                                 >
-                                                    <option value="">Select recurring status</option>
                                                     <option value="yes">Yes</option>
                                                     <option value="no">No</option>
                                                 </select>
                                             </div>
                                             {isRecurring === 'yes' && (
-                                                <div className="mb-3">
+                                                <div className="mb-2">
                                                     <label htmlFor="recurringType" className="form-label">Recurring Type</label>
                                                     <select
                                                         className="form-select"

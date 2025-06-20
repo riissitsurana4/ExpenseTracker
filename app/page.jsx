@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PieChart, DollarSign, Bell, Shield, Wallet, BarChart3 } from "lucide-react";
-import "./homepage.css"; // fixed casing to match actual file
+
 
 const FeatureCard = ({ icon, title, description }) => (
   <div className="feature-card">
