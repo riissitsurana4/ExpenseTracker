@@ -1,4 +1,4 @@
-$primary: #03045eff; 
+$primary: #03045eff;
 $font-family-base: 'Segoe UI', sans-serif;
 $secondary: #023e8aff;
 $ternary: #00b4d8ff;
@@ -6,7 +6,39 @@ $ternary: #00b4d8ff;
 $theme-colors: (
   "primary": $primary,
   "secondary": $secondary,
-  "ternary": $ternary
+  "ternary": $ternary,
 );
 
 @import "bootstrap/scss/bootstrap";
+
+.hero-section {
+  background-image:url('/images/hero2.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: white;
+  min-height: 350px;
+  width: 100%;
+  position: relative;
+}
+
+.hero-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(13, 110, 253, 0.15);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hero-section .container {
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 600px) {
+  .hero-section {
+    min-height: 220px;
+    background-position: center top;
+  }
+}
