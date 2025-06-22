@@ -62,7 +62,7 @@ export default function Profile() {
           </Link>
         </li>
         <li>
-          <Link className="dropdown-item text-secondary" href="#">
+          <Link className="dropdown-item text-secondary" href="/settings">
             Settings
           </Link>
         </li>
