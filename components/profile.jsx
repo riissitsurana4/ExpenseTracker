@@ -57,11 +57,6 @@ export default function Profile() {
       </button>
       <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
         <li>
-          <Link className="dropdown-item text-secondary" href="#">
-            Profile
-          </Link>
-        </li>
-        <li>
           <Link className="dropdown-item text-secondary" href="/settings">
             Settings
           </Link>
