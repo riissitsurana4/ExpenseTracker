@@ -3,6 +3,7 @@
     "@prisma/client": "^6.10.1",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
+    "bcryptjs": "^3.0.2",
     "bootstrap": "^5.3.6",
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.4.9",
@@ -11,11 +12,13 @@
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.511.0",
     "next": "^15.3.2",
+    "next-auth": "^4.24.11",
     "papaparse": "^5.5.3",
     "prisma": "^6.10.1",
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
+    "react-icons": "^5.5.0",
     "sass": "^1.89.1"
   },
   "scripts": {
