@@ -21,8 +21,32 @@ export async function POST(req) {
       name,
       email,
       password: hashedPassword,
+      has_presets: true,
     },
   });
+
+  const presetCategories = [
+    { name: "Food & Dining", type: "expense" },
+    { name: "Transportation", type: "expense" },
+    { name: "Utilities", type: "expense" },
+    { name: "Entertainment", type: "expense" },
+    { name: "Health & Fitness", type: "expense" },
+    { name: "Savings", type: "income" },
+    { name: "Salary", type: "income" },
+    { name: "Investments", type: "income" },
+  ];
+
+  try {
+    await prisma.category.createMany({
+      data: presetCategories.map((category) => ({
+        name: category.name,
+        user_id: user.id,
+      })),
+    });
+  } catch (error) {
+    console.error("Error creating preset categories:", error);
+    return NextResponse.json({ error: "Failed to create preset categories" }, { status: 500 });
+  }
 
   return NextResponse.json({ id: user.id, email: user.email });
 }

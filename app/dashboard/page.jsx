@@ -1,11 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../utils/supabase/client';
+import { useSession } from 'next-auth/react';
 import BootstrapClient from '../../components/BootstrapClient';
-import { presetcategories } from '../../components/presets.jsx'
+import { presetcategories } from '../../components/presets.jsx';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 export default function Dashboard() {
+	const { data: session, status } = useSession();
+	const user = session?.user;
 	const [expenses, setExpenses] = useState([]);
 	const [showModal, setShowModal] = useState(false);
 	const [editExpense, setEditExpense] = useState(null);
@@ -13,7 +15,7 @@ export default function Dashboard() {
 	const [amount, setAmount] = useState('');
 	const [categoryId, setCategoryId] = useState('');
 	const [subcategory, setSubcategory] = useState("");
-	const [totals, setTotals] = useState({ daily: 0, monthly: 0 });
+	const [totals, setTotals] = useState({ daily: 0, monthly: 0, cy: 0 });
 	const [categories, setCategories] = useState([]);
 	const [subcategories, setSubcategories] = useState([]);
 	const [createdAt, setCreatedAt] = useState('');
@@ -25,19 +27,15 @@ export default function Dashboard() {
 	const [isRecurring, setIsRecurring] = useState('no');
 
 	useEffect(() => {
+		if (!user) return;
 		const fetchCurrency = async () => {
-			const { data: { user } } = await supabase.auth.getUser();
-			if (user) {
-				const { data } = await supabase
-					.from('users')
-					.select('currency')
-					.eq('id', user.id)
-					.single();
-				setUserCurrency(data?.currency || 'INR');
-			}
+			const res = await fetch(`/api/user/currency?email=${user.email}`);
+			const data = await res.json();
+			setUserCurrency(data?.currency || 'INR');
 		};
 		fetchCurrency();
-	}, []);
+	}, [user]);
+
 	const currencySign = (cur) => {
 		switch (cur) {
 			case 'USD': return '$';
@@ -46,111 +44,51 @@ export default function Dashboard() {
 			default: return '';
 		}
 	};
+
 	useEffect(() => {
-		fetchExpenses();
-		fetchCategories();
+		if (user) {
+			fetchExpenses();
+			fetchCategories();
+			fetchAllSubcategories();
+		}
 		if (showModal) {
 			document.body.classList.add('modal-open');
 		} else {
 			document.body.classList.remove('modal-open');
 		}
-	}, [showModal]);
+		
+	}, [showModal, user]);	
 
 	useEffect(() => {
+		if (!user) return;
 		const insertPresetsifNeeded = async () => {
-			const { data: { user } } = await supabase.auth.getUser();
-			if (!user) return;
-			for (const category of presetcategories) {
-				const { data: insertedCategories, error: catError } = await supabase
-					.from("categories")
-					.upsert(
-						{ user_id: user.id, name: category.name },
-						{ onConflict: ['user_id', 'name'], ignoreDuplicates: true }
-					)
-					.select();
-
-				let insertedCategory = insertedCategories && insertedCategories[0];
-
-				if (catError) {
-					console.error("Error inserting category:", catError);
-					continue;
-				}
-
-				if (!insertedCategory) {
-					const { data: existingCat, error: fetchCatError } = await supabase
-						.from("categories")
-						.select("*")
-						.eq("user_id", user.id)
-						.eq("name", category.name)
-						.single();
-					if (fetchCatError || !existingCat) {
-						console.error("Could not fetch existing category after upsert:", fetchCatError);
-						continue;
-					}
-					insertedCategory = existingCat;
-				}
-
-				if (category.subcategories.length > 0) {
-					const subcatInserts = category.subcategories.map(name => ({
-						name,
-						category_id: insertedCategory.id,
-						user_id: user.id
-					}));
-					await supabase
-						.from("subcategories")
-						.upsert(
-							subcatInserts,
-							{ onConflict: ['category_id', 'name'], ignoreDuplicates: true }
-						);
-				}
-			}
-
-			await supabase
-				.from("users")
-				.update({ has_presets: true })
-				.eq("id", user.id);
+			await fetch("/api/categories/preset", { method: "POST", body: JSON.stringify({ email: user.email }) });
 		};
 		insertPresetsifNeeded();
-	}, []);
+	}, [user]);
 
 	const fetchExpenses = async () => {
-		const { data, error } = await supabase.auth.getUser();
-		const user = data?.user;
-		if (!user) {
-			return;
-		}
-		const { data: expensesData, error: expensesError } = await supabase
-			.from('expenses')
-			.select('*')
-			.eq('user_id', user.id)
-			.order('created_at', { ascending: false });
-
-		if (!expensesError) {
-			setExpenses(expensesData);
-			calculateTotals(expensesData);
-		}
+		if (!user) return;
+		const res = await fetch(`/api/expenses?email=${user.email}`);
+		const expensesData = await res.json();
+		setExpenses(expensesData);
+		calculateTotals(expensesData);
 	};
 
 	const fetchCategories = async () => {
-		const { data, error } = await supabase.auth.getUser();
-		const user = data?.user;
 		if (!user) return;
-		const { data: categoryData } = await supabase
-			.from('categories')
-			.select('*')
-			.eq('user_id', user.id)
-			.order('name', { ascending: true });
+		const res = await fetch(`/api/categories?email=${user.email}`);
+		const categoryData = await res.json();
 		setCategories(categoryData || []);
 	};
+
 	useEffect(() => {
 		if (categoryId) {
 			const selectedCategory = categories.find(cat => cat.id === categoryId);
 			if (selectedCategory) {
 				const fetchSubcategories = async (categoryId) => {
-					const { data } = await supabase
-						.from('subcategories')
-						.select('name')
-						.eq('category_id', categoryId);
+					const res = await fetch(`/api/subcategories?categoryId=${categoryId}`);
+					const data = await res.json();
 					setSubcategories(data || []);
 					if (!editExpense) setSubcategory("");
 				};
@@ -160,6 +98,7 @@ export default function Dashboard() {
 			setSubcategories([]);
 			setSubcategory("");
 		}
+		
 	}, [categoryId, categories]);
 
 	useEffect(() => {
@@ -238,21 +177,32 @@ export default function Dashboard() {
 			alert('Please enter a valid title and amount.');
 			return;
 		}
-		const { data, error } = await supabase.auth.getUser();
-		const user = data?.user;
 		if (!user) {
 			alert('User not found. Please log in again.');
 			return;
 		}
 		let result;
 		if (editExpense) {
-			result = await supabase
-				.from('expenses')
-				.update({ title, amount: parseFloat(amount), category_id: categoryId, subcategory, created_at: createdAt, recurring_type: recurringType, is_recurring: !!recurringType, mode_of_payment: modeOfPayment })
-				.eq('id', editExpense.id);
+			result = await fetch(`/api/expenses/${editExpense.id}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title,
+					amount: parseFloat(amount),
+					category_id: categoryId,
+					subcategory,
+					created_at: createdAt,
+					recurring_type: recurringType,
+					is_recurring: !!recurringType,
+					mode_of_payment: modeOfPayment,
+					user_id: user.id,
+				}),
+			});
 		} else {
-			result = await supabase.from('expenses').insert([
-				{
+			result = await fetch("/api/expenses", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
 					title,
 					amount: parseFloat(amount),
 					category_id: categoryId,
@@ -261,9 +211,9 @@ export default function Dashboard() {
 					user_id: user.id,
 					recurring_type: recurringType,
 					is_recurring: !!recurringType,
-					mode_of_payment: modeOfPayment
-				},
-			]);
+					mode_of_payment: modeOfPayment,
+				}),
+			});
 		}
 		if (result.error) {
 			alert('Error saving expense: ' + result.error.message);
@@ -274,21 +224,20 @@ export default function Dashboard() {
 	};
 
 	const handleDelete = async (id) => {
-		await supabase.from('expenses').delete().eq('id', id); ``
+		await fetch(`/api/expenses/${id}`, { method: "DELETE" });
 		fetchExpenses();
+
 	};
 
 	useEffect(() => {
+		if (!user) return;
 		const fetchAllSubcategories = async () => {
-			const { data: { user } } = await supabase.auth.getUser();
-			if (!user) return;
-			const { data } = await supabase
-				.from('subcategories')
-				.select('name, category_id');
+			const res = await fetch(`/api/subcategories/all?email=${user.email}`);
+			const data = await res.json();
 			setAllSubcategories(data || []);
 		};
 		fetchAllSubcategories();
-	}, []);
+	}, [user]);
 
 	return (
 		<>

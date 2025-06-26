@@ -1,20 +1,15 @@
 import Link from 'next/link';
-import { createClient } from '../../utils/supabase/server';
 import { redirect } from 'next/navigation';
 import BootstrapClient from '../../components/BootstrapClient';
 import Profile from '../../components/profile';
 import DashboardNavbarClient from '../../components/navbar.jsx';
-
+import { getServerSession } from "next-auth";
+import { authOptions } from '../api/auth/[...nextauth]/route';
 
 export default async function DashboardLayout({ children, modal }) {
-  const supabase = await createClient();
-  const {
-    data,
-    error
-  } = await supabase.auth.getUser();
-  const user = data?.user;
+  const session = await getServerSession(authOptions);
 
-  if (!user) {
+  if (!session?.user) {
     redirect('/loginpages');
   }
 

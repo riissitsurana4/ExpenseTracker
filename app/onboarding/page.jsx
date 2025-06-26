@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Supabase } from '../../utils/supabase/client';
+import { signIn, signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 const steps = [
     {
@@ -31,12 +32,22 @@ const currencies = [
     "/images/currency5.png", "/images/currency6.png", "/images/currency7.png", "/images/currency8.png"
 ];
 
-
-
 export default function OnboardingPage() {
+    const { data: session, status } = useSession();
+    const router = useRouter();
     const [page, setPage] = useState(0);
     const [selectedAvatar, setSelectedAvatar] = useState(null);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
+
+    // Allow access if session is loading or valid
+    if (status === 'loading') {
+        return <p>Loading...</p>;
+    }
+
+    if (!session && status !== 'loading') {
+        router.push('/loginpages');
+        return null;
+    }
 
     const nextPage = () => setPage((prevPage) => Math.min(prevPage + 1, steps.length - 1));
     const prevPage = () => setPage((prevPage) => Math.max(prevPage - 1, 0));
@@ -98,14 +109,12 @@ export default function OnboardingPage() {
                             </div>
                         </div>
                     </>
-
                 )}
                 {page === 1 && (
                     <>
                         <p className="text-secondary fs-4">Choose your avatar</p>
                         {renderGrid(avatars, selectedAvatar, setSelectedAvatar)}
                     </>
-
                 )}
 
                 {page === 2 && (
@@ -113,7 +122,6 @@ export default function OnboardingPage() {
                         <p className="text-secondary fs-4">Select Your Currency</p>
                         {renderGrid(currencies, selectedCurrency, setSelectedCurrency)}
                     </>
-
                 )}
 
                 {page === 3 && (
@@ -174,6 +182,5 @@ export default function OnboardingPage() {
                 )}
             </div>
         </div>
-
     );
 }

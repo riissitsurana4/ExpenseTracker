@@ -48,15 +48,12 @@ export default function SignupPage() {
       setLoading(false);
       return;
     }
-    // Load preset categories
-    await fetch("/api/categories/preset", { method: "POST" });
-    // Redirect to onboarding
-    router.push("/app/onboarding");
+    router.push("/onboarding");
     setLoading(false);
   };
 
   const handleOAuth = async (provider) => {
-    await signIn(provider, { callbackUrl: "/app/onboarding" });
+    await signIn(provider, { callbackUrl: "/onboarding" });
   };
 
   return (

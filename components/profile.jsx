@@ -1,45 +1,37 @@
 'use client'
 import { useEffect, useState } from 'react';
-import { supabase } from '../utils/supabase/client';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Profile() {
-  const [userEmail, setUserEmail] = useState('');
-  const [currency, setCurrency] = useState('INR');
-  const [userId, setUserId] = useState(null);
+  const { data: session } = useSession();
   const router = useRouter();
+  const [currency, setCurrency] = useState('INR');
+  const user = session?.user;
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        setUserId(data.user.id);
-        setUserEmail(data.user.email);
-      }
-      const { data: userData } = await supabase
-        .from('users')
-        .select('currency')
-        .eq('id', data.user.id)
-        .single();
-      if (userData?.currency) {
-        setCurrency(userData.currency);
-      }
+    if (!user) return;
+    const fetchCurrency = async () => {
+      const res = await fetch(`/api/user/currency?email=${user.email}`);
+      const data = await res.json();
+      if (data?.currency) setCurrency(data.currency);
     };
-    fetchUser();
-  }, []);
+    fetchCurrency();
+  }, [user]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/loginpages');
+    await signOut({ callbackUrl: '/loginpages' });
   };
+
   const handleCurrencyChange = async (e) => {
     const newCurrency = e.target.value;
     setCurrency(newCurrency);
-    await supabase
-      .from('users')
-      .update({ currency: newCurrency })
-      .eq('id', userId);
+    await fetch('/api/user/currency', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, currency: newCurrency }),
+    });
     window.location.reload();
   };
 
@@ -53,7 +45,6 @@ export default function Profile() {
         aria-expanded="false"
       >
         <img src="/profile.png" alt="Profile" className="profile-icon" />
-
       </button>
       <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
         <li>

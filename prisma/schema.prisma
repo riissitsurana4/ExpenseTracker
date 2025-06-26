@@ -49,7 +49,12 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String? 
-
+  has_presets   Boolean?      @default(false)
+  currency      String?       @default("INR")
+  budgets       Budget[]
+  categories    Category[]
+  expenses      Expense[]
+  subcategories Subcategory[]
   accounts Account[]
   sessions Session[]
 }
@@ -60,4 +65,56 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Budget {
+  id               String    @id @default(uuid())
+  user             User?     @relation(fields: [user_id], references: [id])
+  user_id          String?
+  amount           Decimal
+  category         Category? @relation(fields: [category_id], references: [id])
+  category_id      String?
+  start_date       DateTime
+  end_date         DateTime
+  budget_period_type String
+  description      String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now())
+}
+
+model Category {
+  id           String        @id @default(uuid())
+  name         String
+  user         User          @relation(fields: [user_id], references: [id])
+  user_id      String
+  budget       Decimal?
+  budgets      Budget[]
+  expenses     Expense[]
+  subcategories Subcategory[]
+}
+
+model Expense {
+  id               String    @id @default(uuid())
+  user             User?     @relation(fields: [user_id], references: [id])
+  user_id          String?
+  amount           Decimal
+  date             DateTime  @default(now())
+  created_at       DateTime  @default(now())
+  title            String?
+  subcategory      String?
+  is_recurring     Boolean?  @default(false)
+  recurring_type   String?
+  next_occurrence  DateTime?
+  mode_of_payment  String?
+  category         Category? @relation(fields: [category_id], references: [id])
+  category_id      String?
+}
+
+model Subcategory {
+  id          String    @id @default(uuid())
+  name        String
+  category    Category  @relation(fields: [category_id], references: [id])
+  category_id String
+  user        User      @relation(fields: [user_id], references: [id])
+  user_id     String
 }
