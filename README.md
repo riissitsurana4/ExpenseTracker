@@ -1,3 +1,4 @@
+![nhbadge](https://img.shields.io/badge/made%20for%20neighborhood-bf8f73?style=for-the-badge&logo=hackclub&logoColor=ffffff)
 # 💸 Expense Tracker App
 
 A modern, responsive expense tracking application built with Next.js, Supabase, and Bootstrap. Effortlessly track your daily spending, analyze trends, and stay within your budget — all in one sleek interface.
