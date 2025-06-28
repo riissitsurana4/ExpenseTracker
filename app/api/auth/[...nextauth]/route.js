@@ -46,10 +46,20 @@ export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async session({ session, user }) {
+      console.log("Session callback invoked:", { session, user });
       if (user) {
         session.user.id = user.id;
+        session.user.name = user.name;
       }
       return session;
+    },
+    async jwt({ token, user }) {
+      console.log("JWT callback invoked:", { token, user });
+      if (user) {
+        token.id = user.id;
+        token.name = user.name; 
+      }
+      return token;
     },
   },
 };

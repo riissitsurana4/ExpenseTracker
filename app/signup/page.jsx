@@ -42,13 +42,21 @@ export default function SignupPage() {
       email: form.email,
       password: form.password,
       redirect: false,
+      callbackUrl: "/onboarding", // Force callback URL
     });
+    console.log("SignIn Response:", signInRes);
+
     if (signInRes?.error) {
+      console.error("SignIn Error:", signInRes.error);
       setError(signInRes.error);
       setLoading(false);
       return;
     }
-    router.push("/onboarding");
+
+    console.log("SignIn Successful, redirecting to onboarding...");
+    console.log("Before router.push to onboarding");
+    router.push(signInRes.url || "/onboarding"); // Use signInRes.url if available
+    console.log("After router.push to onboarding");
     setLoading(false);
   };
 

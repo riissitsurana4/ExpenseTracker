@@ -24,16 +24,14 @@ export async function POST(req) {
       has_presets: true,
     },
   });
-
   const presetCategories = [
-    { name: "Food & Dining", type: "expense" },
-    { name: "Transportation", type: "expense" },
-    { name: "Utilities", type: "expense" },
-    { name: "Entertainment", type: "expense" },
-    { name: "Health & Fitness", type: "expense" },
-    { name: "Savings", type: "income" },
-    { name: "Salary", type: "income" },
-    { name: "Investments", type: "income" },
+    { name: "Food", type: "expense", user_id: user.id },
+    { name: "Travel", type: "expense", user_id: user.id },
+    { name: "Utilities", type: "expense", user_id: user.id },
+    { name: "Financial", type: "expense", user_id: user.id },
+    { name: "Health", type: "expense", user_id: user.id },
+    { name: "Miscellaneous", type: "expense", user_id: user.id },
+    { name: "Shopping", type: "expense", user_id: user.id },
   ];
 
   try {

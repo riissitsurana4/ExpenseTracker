@@ -1,0 +1,14 @@
+import { prisma } from '../../../lib/prisma';
+import { getSession } from 'next-auth/react';
+
+export async function GET(req) {
+  const session = await getSession({ req });
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+  }
+
+  const { email } = session.user;
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  return new Response(JSON.stringify({ currency: user?.currency || 'INR' }), { status: 200 });
+}

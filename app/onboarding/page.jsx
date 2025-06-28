@@ -1,7 +1,7 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { useSession, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 const steps = [
@@ -39,14 +39,32 @@ export default function OnboardingPage() {
     const [selectedAvatar, setSelectedAvatar] = useState(null);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
 
+    useEffect(() => {
+        const fetchSession = async () => {
+            const updatedSession = await getSession();
+            console.log("Updated session data:", updatedSession);
+            if (!updatedSession) {
+                console.log("Session invalid, redirecting to login...");
+                router.push("/loginpages");
+            }
+        };
+
+        if (status === 'unauthenticated') {
+            console.log("Unauthenticated status detected.");
+            fetchSession();
+        } else {
+            console.log("Session status:", status);
+            console.log("Session data:", session);
+        }
+    }, [status, router]);
+
+    // Debug logs for session status
+    console.log("Session status:", status);
+    console.log("Session data:", session);
+
     // Allow access if session is loading or valid
     if (status === 'loading') {
         return <p>Loading...</p>;
-    }
-
-    if (!session && status !== 'loading') {
-        router.push('/loginpages');
-        return null;
     }
 
     const nextPage = () => setPage((prevPage) => Math.min(prevPage + 1, steps.length - 1));
