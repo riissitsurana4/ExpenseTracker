@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "../../../../lib/prisma";
+import prisma from "@/lib/prisma";
 
 
 export async function GET(request) {
@@ -12,7 +12,7 @@ export async function GET(request) {
     if (!user) return NextResponse.json([], { status: 404 });
 
     const expenses = await prisma.expense.findMany({
-        where: { userId: user.id },
+        where: { user_id: user.id },
         orderBy: { created_at: "desc" },
     });
     return NextResponse.json(expenses);

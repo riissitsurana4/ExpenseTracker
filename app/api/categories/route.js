@@ -1,15 +1,19 @@
-import { prisma } from "../../../lib/prisma";
-import { getSession } from "next-auth/react";
+import prisma from "@/lib/prisma";
+import { getToken } from "next-auth/jwt";
 
 export async function GET(req) {
-    const session = await getSession({ req });
-    if (!session) {
+    console.log('Incoming request headers:', req.headers);
+
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    console.log('Token:', token);
+
+    if (!token) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    const { email } = session.user;
+    const { email } = token;
     const categories = await prisma.category.findMany({
-        where: { userEmail: email },
+        where: { user_id: email },
     });
 
     return new Response(JSON.stringify(categories), { status: 200 });

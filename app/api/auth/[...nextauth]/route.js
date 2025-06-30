@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import prisma from "../../../../lib/prisma";
+import prisma from "@/lib/prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
@@ -42,11 +42,10 @@ export const authOptions = {
       from: process.env.EMAIL_FROM,
     }),
   ],
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async session({ session, user }) {
-      console.log("Session callback invoked:", { session, user });
       if (user) {
         session.user.id = user.id;
         session.user.name = user.name;
@@ -54,7 +53,6 @@ export const authOptions = {
       return session;
     },
     async jwt({ token, user }) {
-      console.log("JWT callback invoked:", { token, user });
       if (user) {
         token.id = user.id;
         token.name = user.name; 

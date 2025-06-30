@@ -25,7 +25,6 @@ export default function SignupPage() {
       return;
     }
     setLoading(true);
-    // Signup
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -37,26 +36,20 @@ export default function SignupPage() {
       setLoading(false);
       return;
     }
-    // Sign in
     const signInRes = await signIn("credentials", {
       email: form.email,
       password: form.password,
       redirect: false,
-      callbackUrl: "/onboarding", // Force callback URL
+      callbackUrl: "/onboarding",
     });
-    console.log("SignIn Response:", signInRes);
 
     if (signInRes?.error) {
-      console.error("SignIn Error:", signInRes.error);
       setError(signInRes.error);
       setLoading(false);
       return;
     }
 
-    console.log("SignIn Successful, redirecting to onboarding...");
-    console.log("Before router.push to onboarding");
-    router.push(signInRes.url || "/onboarding"); // Use signInRes.url if available
-    console.log("After router.push to onboarding");
+    router.push(signInRes.url || "/onboarding");
     setLoading(false);
   };
 

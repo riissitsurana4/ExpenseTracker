@@ -69,17 +69,44 @@ export default function Dashboard() {
 
 	const fetchExpenses = async () => {
 		if (!user) return;
-		const res = await fetch(`/api/expenses?email=${user.email}`);
-		const expensesData = await res.json();
-		setExpenses(expensesData);
-		calculateTotals(expensesData);
+		try {
+			const res = await fetch(`/api/expenses?email=${user.email}`);
+			if (!res.ok) {
+				console.error('Failed to fetch expenses:', res.statusText);
+				setExpenses([]);
+				return;
+			}
+			const expensesData = await res.json();
+			setExpenses(expensesData);
+			calculateTotals(expensesData);
+		} catch (error) {
+			console.error('Error parsing JSON response:', error);
+			setExpenses([]);
+		}
 	};
 
 	const fetchCategories = async () => {
 		if (!user) return;
-		const res = await fetch(`/api/categories?email=${user.email}`);
-		const categoryData = await res.json();
-		setCategories(categoryData || []);
+		try {
+			const token = session?.accessToken;
+			const res = await fetch(`/api/categories`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+			});
+			if (!res.ok) {
+				console.error('Failed to fetch categories:', res.statusText);
+				setCategories([]);
+				return;
+			}
+			const categoryData = await res.json();
+			setCategories(Array.isArray(categoryData) ? categoryData : []);
+		} catch (error) {
+			console.error('Error parsing JSON response for categories:', error);
+			setCategories([]);
+		}
 	};
 
 	useEffect(() => {
@@ -229,13 +256,14 @@ export default function Dashboard() {
 
 	};
 
-	useEffect(() => {
+	const fetchAllSubcategories = async () => {
 		if (!user) return;
-		const fetchAllSubcategories = async () => {
-			const res = await fetch(`/api/subcategories/all?email=${user.email}`);
-			const data = await res.json();
-			setAllSubcategories(data || []);
-		};
+		const res = await fetch(`/api/subcategories/all?email=${user.email}`);
+		const data = await res.json();
+		setAllSubcategories(data || []);
+	};
+
+	useEffect(() => {
 		fetchAllSubcategories();
 	}, [user]);
 

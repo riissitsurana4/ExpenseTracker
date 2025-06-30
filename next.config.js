@@ -1,8 +1,12 @@
-/** @type {import('next').NextConfig} */
+
 const nextConfig = {
   reactStrictMode: true,
   sassOptions: {
-    includePaths: ['styles'], // Adjust if needed
+    includePaths: ['styles'], 
+  },
+  webpack: (config) => {
+    config.resolve.alias['@'] = __dirname;
+    return config;
   },
 };
 
