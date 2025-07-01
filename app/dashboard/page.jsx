@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import BootstrapClient from '../../components/BootstrapClient';
-import { presetcategories } from '../../components/presets.jsx';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 export default function Dashboard() {
@@ -72,7 +71,6 @@ export default function Dashboard() {
 		try {
 			const res = await fetch(`/api/expenses?email=${user.email}`);
 			if (!res.ok) {
-				console.error('Failed to fetch expenses:', res.statusText);
 				setExpenses([]);
 				return;
 			}
@@ -80,7 +78,6 @@ export default function Dashboard() {
 			setExpenses(expensesData);
 			calculateTotals(expensesData);
 		} catch (error) {
-			console.error('Error parsing JSON response:', error);
 			setExpenses([]);
 		}
 	};
@@ -88,23 +85,14 @@ export default function Dashboard() {
 	const fetchCategories = async () => {
 		if (!user) return;
 		try {
-			const token = session?.accessToken;
-			const res = await fetch(`/api/categories`, {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${token}`,
-				},
-			});
+			const res = await fetch(`/api/categories?email=${user.email}`);
 			if (!res.ok) {
-				console.error('Failed to fetch categories:', res.statusText);
 				setCategories([]);
 				return;
 			}
 			const categoryData = await res.json();
 			setCategories(Array.isArray(categoryData) ? categoryData : []);
 		} catch (error) {
-			console.error('Error parsing JSON response for categories:', error);
 			setCategories([]);
 		}
 	};

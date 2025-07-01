@@ -66,7 +66,7 @@ export default function SignupPage() {
     >
       <div className="modal-dialog modal-dialog-centered" role="document">
         <div className="modal-content shadow-lg rounded-4 border-0">
-          <div className="modal-header bg-primary text-white rounded-top-4 border-0">
+          <div className="modal-header bg-primary text-white rounded-top-4 border-0 justify-content-center">
             <h5 className="modal-title fw-bold">Create your account</h5>
           </div>
           <div className="modal-body p-4">
@@ -149,18 +149,44 @@ export default function SignupPage() {
               </button>
             </form>
             <div className="text-center my-2 text-muted">or</div>
-            <button
-              className="btn btn-outline-danger w-100 mb-2 d-flex align-items-center justify-content-center rounded-pill"
-              onClick={() => handleOAuth("google")}
-              type="button"
-              aria-label="Sign up with Google"
-            >
-              <img
-                src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
-                alt="Google"
-                style={{ width: 24, height: 24 }}
-              />
-            </button>
+            <div className="d-flex justify-content-center my-3">
+              <button
+                className="btn p-0"
+                onClick={() => handleOAuth("google")}
+                aria-label="Sign in with Google"
+                style={{ background: "none", border: "none" }}
+              >
+                <img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
+                  alt="Google"
+                  style={{ width: 32, height: 32, marginRight: 16 }}
+                />
+              </button>
+              <button
+                className="btn p-0"
+                onClick={() => handleOAuth("facebook")}
+                aria-label="Sign in with Facebook"
+                style={{ background: "none", border: "none" }}
+              >
+                <img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/facebook/facebook-original.svg"
+                  alt="Facebook"
+                  style={{ width: 32, height: 32, marginRight: 16 }}
+                />
+              </button>
+              <button
+                className="btn p-0"
+                onClick={() => handleOAuth("github")}
+                aria-label="Sign in with GitHub"
+                style={{ background: "none", border: "none" }}
+              >
+                <img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg"
+                  alt="GitHub"
+                  style={{ width: 32, height: 32 }}
+                />
+              </button>
+            </div>
             <button
               className="btn btn-outline-secondary w-100 rounded-pill fw-semibold"
               onClick={() => handleOAuth("email")}
@@ -168,6 +194,17 @@ export default function SignupPage() {
             >
               Sign up with Email Link
             </button>
+            <div className="text-center mt-3">
+              <p>
+                Already have an account?{" "}
+                <button
+                  className="btn btn-link p-0"
+                  onClick={() => router.push("/loginpages")}
+                >
+                  Log In
+                </button>
+              </p>
+            </div>
           </div>
         </div>
       </div>

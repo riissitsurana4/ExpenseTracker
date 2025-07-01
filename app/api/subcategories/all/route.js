@@ -1,22 +1,28 @@
 import prisma from "@/lib/prisma";
-import { getSession } from "next-auth/react";
-import { getToken } from "next-auth/jwt";
 
 export async function GET(req) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    try {
+        const { searchParams } = new URL(req.url);
+        const email = searchParams.get('email');
+        
+        if (!email) {
+            return new Response(JSON.stringify({ error: 'Email parameter required' }), { status: 400 });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { email: email }
+        });
+
+        if (!user) {
+            return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+        }
+
+        const subcategories = await prisma.subcategory.findMany({
+            where: { user_id: user.id },
+        });
+
+        return new Response(JSON.stringify(subcategories), { status: 200 });
+    } catch (error) {
+        return new Response(JSON.stringify({ error: 'Failed to fetch subcategories' }), { status: 500 });
     }
-
-    const session = await getSession({ req });
-    if (!session) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
-
-    const { email } = session.user;
-    const subcategories = await prisma.subcategory.findMany({
-        where: { user_id: email },
-    });
-
-    return new Response(JSON.stringify(subcategories), { status: 200 });
 }

@@ -42,20 +42,6 @@ export default function Login() {
     }
   }
 
-  const handleMagicLink = async () => {
-    const res = await signIn("email", {
-      email: form.email,
-      redirect: false,
-      callbackUrl: "/dashboard",
-    });
-    if (res?.error) {
-      setError("Failed to send magic link");
-    } else {
-      setError("Check your email for the magic link");
-    }
-    setLoading(false);
-  }
-
 
   return (
     <div
@@ -66,7 +52,7 @@ export default function Login() {
     >
       <div className="modal-dialog modal-dialog-centered" role="document">
         <div className="modal-content shadow-lg rounded-4 border-0">
-          <div className="modal-header bg-primary text-white rounded-top-4 border-0">
+          <div className="modal-header bg-primary text-white rounded-top-4 border-0 justify-content-center">
             <h5 className="modal-title fw-bold">Sign In</h5>
           </div>
           <div className="modal-body p-4">
@@ -116,26 +102,39 @@ export default function Login() {
               </button>
             </form>
             <div className="text-center my-2 text-muted">or</div>
-            <button
-              className="btn btn-outline-danger w-100 mb-2 d-flex align-items-center justify-content-center rounded-pill"
-              onClick={() => handleOAuth("google")}
-              type="button"
-              aria-label="Sign in with Google"
-            >
-              <img
-                src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
-                alt="Google"
-                style={{ width: 24, height: 24 }}
-              />
-            </button>
-            <button
-              className="btn btn-outline-secondary w-100 rounded-pill fw-semibold"
-              onClick={handleMagicLink}
-              type="button"
-              disabled={!form.email || loading}
-            >
-              Send Magic Link
-            </button>
+            
+            <div className="d-flex justify-content-center my-3">
+              <button
+                className="btn p-0"
+                onClick={() => handleOAuth("google")}
+                aria-label="Sign in with Google"
+                style={{ background: "none", border: "none" }}
+              >
+                <img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
+                  alt="Google"
+                  style={{ width: 32, height: 32 }}
+                />
+              </button>
+            </div>
+            <div className="text-center mt-3">
+              <p>
+                Don't have an account?{" "}
+                <button
+                  className="btn btn-link p-0"
+                  onClick={() => router.push("/signup")}
+                >
+                  Sign Up
+                </button>
+                {" | "}
+                <button
+                  className="btn btn-link p-0"
+                  onClick={() => router.push("/forgot-password")}
+                >
+                  Forgot Password?
+                </button>
+              </p>
+            </div>
           </div>
         </div>
       </div>

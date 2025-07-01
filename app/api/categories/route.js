@@ -1,20 +1,28 @@
 import prisma from "@/lib/prisma";
-import { getToken } from "next-auth/jwt";
 
 export async function GET(req) {
-    console.log('Incoming request headers:', req.headers);
+    try {
+        const { searchParams } = new URL(req.url);
+        const email = searchParams.get('email');
+        
+        if (!email) {
+            return new Response(JSON.stringify({ error: 'Email parameter required' }), { status: 400 });
+        }
 
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    console.log('Token:', token);
+        const user = await prisma.user.findUnique({
+            where: { email: email }
+        });
 
-    if (!token) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        if (!user) {
+            return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+        }
+
+        const categories = await prisma.category.findMany({
+            where: { user_id: user.id },
+        });
+
+        return new Response(JSON.stringify(categories), { status: 200 });
+    } catch (error) {
+        return new Response(JSON.stringify({ error: 'Failed to fetch categories' }), { status: 500 });
     }
-
-    const { email } = token;
-    const categories = await prisma.category.findMany({
-        where: { user_id: email },
-    });
-
-    return new Response(JSON.stringify(categories), { status: 200 });
 }

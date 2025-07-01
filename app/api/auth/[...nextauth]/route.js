@@ -1,12 +1,9 @@
 import NextAuth from "next-auth";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import EmailProvider from "next-auth/providers/email";
 
 export const authOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -37,28 +34,151 @@ export const authOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
-    EmailProvider({
-      server: process.env.EMAIL_SERVER,
-      from: process.env.EMAIL_FROM,
-    }),
   ],
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async session({ session, user }) {
-      if (user) {
-        session.user.id = user.id;
-        session.user.name = user.name;
-      }
-      return session;
-    },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
-        token.name = user.name; 
+        token.name = user.name;
+        token.email = user.email;
       }
       return token;
     },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id;
+        session.user.name = token.name;
+        session.user.email = token.email;
+      }
+      return session;
+    },
+    async signIn({ user, account, profile }) {
+      console.log("signIn callback triggered for provider:", account?.provider);
+      
+      if (account?.provider === "credentials") {
+        return true;
+      }
+
+      // Handle OAuth providers (Google)
+      if (account?.provider === "google") {
+        try {
+          console.log("Processing OAuth sign-in for:", user.email);
+          
+          let existingUser = await prisma.user.findUnique({ 
+            where: { email: user.email },
+            select: { id: true, has_presets: true, name: true, email: true }
+          });
+
+          // If user doesn't exist, create them
+          if (!existingUser) {
+            console.log("Creating new user for OAuth:", user.email);
+            existingUser = await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name || user.email.split('@')[0],
+                has_presets: false,
+              },
+            });
+            console.log("New user created:", existingUser.id);
+          }
+
+          // Create presets if user doesn't have them
+          if (!existingUser.has_presets) {
+            console.log("Creating preset categories for user:", existingUser.id);
+            
+            const presetCategories = [
+              { name: "Food", type: "expense" },
+              { name: "Travel", type: "expense" },
+              { name: "Utilities", type: "expense" },
+              { name: "Financial", type: "expense" },
+              { name: "Health", type: "expense" },
+              { name: "Miscellaneous", type: "expense" },
+              { name: "Shopping", type: "expense" },
+            ];
+
+            const presetSubcategories = [
+              { category: "Food", name: "Groceries" },
+              { category: "Food", name: "Dining Out" },
+              { category: "Food", name: "Delivery" },
+              { category: "Travel", name: "Flights" },
+              { category: "Travel", name: "Accommodation" },
+              { category: "Travel", name: "Fuel" },
+              { category: "Travel", name: "Taxi" },
+              { category: "Utilities", name: "Internet" },
+              { category: "Utilities", name: "Electricity" },
+              { category: "Utilities", name: "Water" },
+              { category: "Utilities", name: "Gas" },
+              { category: "Utilities", name: "Mobile" },
+              { category: "Financial", name: "Investments" },
+              { category: "Financial", name: "Loans" },
+              { category: "Financial", name: "Savings" },
+              { category: "Financial", name: "Taxes" },
+              { category: "Health", name: "Medical Bills" },
+              { category: "Health", name: "Pharmacy" },
+              { category: "Health", name: "Health Insurance" },
+              { category: "Miscellaneous", name: "Gifts" },
+              { category: "Miscellaneous", name: "Donations" },
+              { category: "Miscellaneous", name: "DTH/Subscriptions" },
+              { category: "Miscellaneous", name: "Education" },
+              { category: "Miscellaneous", name: "Pets" },
+              { category: "Shopping", name: "In-store" },
+              { category: "Shopping", name: "Online" },
+            ];
+
+            // Create categories
+            await prisma.category.createMany({
+              data: presetCategories.map((category) => ({
+                name: category.name,
+                type: category.type,
+                user_id: existingUser.id,
+              })),
+            });
+
+            // Get created categories
+            const categories = await prisma.category.findMany({ 
+              where: { user_id: existingUser.id } 
+            });
+
+            // Create subcategories
+            const subcategoriesData = presetSubcategories.map((subcategory) => {
+              const dbCategory = categories.find((cat) => cat.name === subcategory.category);
+              if (!dbCategory) return null;
+              return {
+                name: subcategory.name,
+                category_id: dbCategory.id,
+                user_id: existingUser.id,
+              };
+            }).filter(Boolean);
+
+            if (subcategoriesData.length > 0) {
+              await prisma.subcategory.createMany({
+                data: subcategoriesData,
+              });
+            }
+
+            // Mark user as having presets
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { has_presets: true },
+            });
+
+            console.log("Preset categories created successfully for user:", existingUser.id);
+          }
+
+          // Update the user object with the database ID for the token
+          user.id = existingUser.id;
+          
+          return true;
+        } catch (error) {
+          console.error("Error in OAuth signIn callback:", error);
+          return false;
+        }
+      }
+      
+      return true;
+    }
   },
 };
 
