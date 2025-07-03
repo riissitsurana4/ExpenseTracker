@@ -24,6 +24,9 @@ export default function Dashboard() {
 	const [allSubcategories, setAllSubcategories] = useState([]);
 	const [filteredSubcategories, setFilteredSubcategories] = useState([]);
 	const [isRecurring, setIsRecurring] = useState('no');
+	const [recurringExpenses, setRecurringExpenses] = useState([]);
+	const [showRecurringModal, setShowRecurringModal] = useState(false);
+	
 
 	useEffect(() => {
 		if (!user) return;
@@ -49,6 +52,7 @@ export default function Dashboard() {
 			fetchExpenses();
 			fetchCategories();
 			fetchAllSubcategories();
+			fetchRecurringExpenses(); 
 		}
 		if (showModal) {
 			document.body.classList.add('modal-open');
@@ -211,6 +215,7 @@ export default function Dashboard() {
 					is_recurring: !!recurringType,
 					mode_of_payment: modeOfPayment,
 					user_id: user.id,
+					user_email: user.email, // Add this line
 				}),
 			});
 		} else {
@@ -224,6 +229,7 @@ export default function Dashboard() {
 					subcategory,
 					created_at: createdAt,
 					user_id: user.id,
+					user_email: user.email, // Add this line
 					recurring_type: recurringType,
 					is_recurring: !!recurringType,
 					mode_of_payment: modeOfPayment,
@@ -249,6 +255,62 @@ export default function Dashboard() {
 		const res = await fetch(`/api/subcategories/all?email=${user.email}`);
 		const data = await res.json();
 		setAllSubcategories(data || []);
+	};
+
+	const fetchRecurringExpenses = async () => {
+		if (!user) return;
+		try {
+			const res = await fetch(`/api/expenses/recurring?email=${user.email}`);
+			if (!res.ok) {
+				setRecurringExpenses([]);
+				return;
+			}
+			const data = await res.json();
+			setRecurringExpenses(Array.isArray(data) ? data : []);
+		} catch (error) {
+			setRecurringExpenses([]);
+		}
+	};
+
+	const processRecurringExpenses = async () => {
+		if (!user) return;
+		try {
+			const res = await fetch('/api/expenses/recurring', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: user.email })
+			});
+			
+			if (res.ok) {
+				const result = await res.json();
+				alert(result.message);
+				fetchExpenses(); // Refresh expenses list
+				fetchRecurringExpenses(); // Refresh recurring expenses
+			} else {
+				const error = await res.json();
+				alert('Error: ' + error.error);
+			}
+		} catch (error) {
+			alert('Error processing recurring expenses');
+		}
+	};
+
+	const deleteRecurringExpense = async (id) => {
+		if (!confirm('Are you sure you want to delete this recurring expense? This will not affect already created instances.')) {
+			return;
+		}
+		
+		try {
+			const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+			if (res.ok) {
+				fetchRecurringExpenses();
+				alert('Recurring expense deleted successfully');
+			} else {
+				alert('Error deleting recurring expense');
+			}
+		} catch (error) {
+			alert('Error deleting recurring expense');
+		}
 	};
 
 	useEffect(() => {

@@ -89,21 +89,3 @@ export async function POST(request) {
         );
     }
 }
-
-export async function PUT(request, { params }) {
-    const { id } = params;
-    const { amount, description, categoryId, subcategoryId } = await request.json();
-
-    const updated = await prisma.expense.update({
-        where: { id },
-        data: { amount, description, categoryId, subcategoryId },
-    });
-
-    return NextResponse.json(updated);
-}
-
-export async function DELETE(request, { params }) {
-    const { id } = params;
-    await prisma.expense.delete({ where: { id } });
-    return NextResponse.json({ success: true });
-}
