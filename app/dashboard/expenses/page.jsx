@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { supabase } from '../../../utils/supabase/client';
+import { useSession } from 'next-auth/react';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -14,17 +14,14 @@ export default function Expenses() {
     const [year, setYear] = useState('');
     const [fetchError, setFetchError] = useState('');
     const [loading, setLoading] = useState(true);
-    const [filteredExpenses, setFilteredExpenses] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [editExpense, setEditExpense] = useState(null);
     const [title, setTitle] = useState('');
     const [amount, setAmount] = useState('');
-    const [category, setCategory] = useState('');
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [subcategory, setSubcategory] = useState("");
     const [createdAt, setCreatedAt] = useState('');
     const [categories, setCategories] = useState([]);
-    const [subcategories, setSubcategories] = useState([]);
     const [allSubcategories, setAllSubcategories] = useState([]);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -34,13 +31,97 @@ export default function Expenses() {
     const [filterAmountMax, setFilterAmountMax] = useState('');
     const [filterModeOfPayment, setFilterModeOfPayment] = useState('');
     const [filterRecurring, setFilterRecurring] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
     const [userCurrency, setUserCurrency] = useState('INR');
     const [modeOfPayment, setModeOfPayment] = useState('');
     const [sortColumn, setSortColumn] = useState('');
     const [sortDirection, setSortDirection] = useState('asc');
     const [isRecurring, setIsRecurring] = useState('');
     const [recurringType, setRecurringType] = useState('');
+
+    const { data: session, status } = useSession();
+
+    const filteredSubcategories = useMemo(() => {
+        if(!selectedCategoryId || !allSubcategories.length) return [];
+        return allSubcategories.filter(sub => sub.category_id === selectedCategoryId);
+    }, [selectedCategoryId, allSubcategories]);
+
+    const filterSubcategories = useMemo(() => {
+        if(!filterCategory || !allSubcategories.length || !categories.length) return [];
+        const selectedFilterCategoryId = categories.find(cat => cat.name === filterCategory)?.id;
+        if (!selectedFilterCategoryId) return [];
+        return allSubcategories.filter(sub => sub.category_id === selectedFilterCategoryId);
+    }, [filterCategory, allSubcategories, categories]);
+
+    const isCurrentMonth = useMemo(() => {
+        if (!month) return false;
+        const currentDate = new Date();
+        const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        return month === currentMonth;
+    }, [month]);
+
+    const fetchExpenses = async () => {
+        if (!session?.user?.email) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/expenses?email=${encodeURIComponent(session.user.email)}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch expenses: ${response.status} ${errorText}`);
+            }
+            
+            const data = await response.json();
+            setExpenses(Array.isArray(data) ? data : []);
+            setFetchError('');
+        } catch (error) {
+            setFetchError(`Failed to load expenses: ${error.message}`);
+            setExpenses([]);
+        }
+    };
+
+    const fetchCategories = async () => {
+        if (!session?.user?.email) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/categories?email=${encodeURIComponent(session.user.email)}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch categories: ${response.status} ${errorText}`);
+            }
+            
+            const data = await response.json();
+            setCategories(Array.isArray(data) ? data : []);
+        } catch (error) {
+            setFetchError(`Failed to load categories: ${error.message}`);
+            setCategories([]);
+        }
+    };
+
+    const fetchSubcategories = async () => {
+        if (!session?.user?.email) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/subcategories/all?email=${encodeURIComponent(session.user.email)}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch subcategories: ${response.status} ${errorText}`);
+            }
+            
+            const data = await response.json();
+            setAllSubcategories(Array.isArray(data) ? data : []);
+        } catch (error) {
+            setFetchError(`Failed to load subcategories: ${error.message}`);
+            setAllSubcategories([]);
+        }
+    };
 
     const handleSort = (column) => {
         if (sortColumn === column) {
@@ -74,6 +155,7 @@ export default function Expenses() {
             if (filterRecurring === 'yes') filteredData = filteredData.filter(exp => exp.is_recurring);
             else if (filterRecurring === 'no') filteredData = filteredData.filter(exp => !exp.is_recurring);
         }
+        
         return filteredData;
     }, [expenses, date, month, year, startDate, endDate, filterCategory, filterSubcategory, filterAmountMin, filterAmountMax, filterModeOfPayment, filterRecurring, categories]);
 
@@ -98,38 +180,12 @@ export default function Expenses() {
         return sorted;
     }, [filtered, sortColumn, sortDirection, categories]);
 
-    useEffect(() => {
-        const fetchCurrency = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data } = await supabase
-                    .from('users')
-                    .select('currency')
-                    .eq('id', user.id)
-                    .single();
-                setUserCurrency(data?.currency || 'INR');
-            }
-        };
-        fetchCurrency();
-    }, []);
-    const currencySign = (cur) => {
-        switch (cur) {
-            case 'USD': return '$';
-            case 'EUR': return '€';
-            case 'INR': return '₹';
-            default: return '';
-        }
-    };
     const openModal = (expense = null) => {
         setEditExpense(expense);
         if (expense) {
             setTitle(expense.title || '');
             setAmount(expense.amount || '');
-
-            const expenseCategory = categories.find(cat => cat.id === expense.category_id);
-            setCategory(expenseCategory ? expenseCategory.name : '');
             setSelectedCategoryId(expense.category_id || '');
-
             setSubcategory(expense.subcategory || "");
             setCreatedAt(expense.created_at ? expense.created_at.slice(0, 10) : '');
             setModeOfPayment(expense.mode_of_payment || "");
@@ -138,7 +194,6 @@ export default function Expenses() {
         } else {
             setTitle('');
             setAmount('');
-            setCategory('');
             setSelectedCategoryId('');
             setSubcategory("");
             setCreatedAt(new Date().toISOString().slice(0, 10));
@@ -152,178 +207,13 @@ export default function Expenses() {
         setShowModal(false);
         setTitle('');
         setAmount('');
-        setCategory('');
         setSelectedCategoryId('');
         setSubcategory("");
         setEditExpense(null);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!title.trim() || !amount || isNaN(parseFloat(amount))) {
-            alert('Please enter a valid title and amount.');
-            return;
-        }
-
-        if (!selectedCategoryId) {
-            alert('Please select a category.');
-            return;
-        }
-        if (!isRecurring) {
-            alert('Please select recurring status.');
-            return;
-        }
-        if (isRecurring === 'yes' && !recurringType) {
-            alert('Please select recurring type.');
-            return;
-        }
-        const formattedAmount = parseFloat(parseFloat(amount).toFixed(2));
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            alert('User not found. Please log in again.');
-            return;
-        }
-        let result;
-        if (editExpense) {
-            result = await supabase
-                .from('expenses')
-                .update({
-                    title,
-                    amount: formattedAmount,
-                    category_id: selectedCategoryId,
-                    subcategory,
-                    created_at: createdAt,
-                    mode_of_payment: modeOfPayment,
-                    is_recurring: isRecurring === 'yes',
-                    recurring_type: isRecurring === 'yes' ? recurringType : null
-                })
-                .eq('id', editExpense.id);
-        } else {
-            result = await supabase.from('expenses').insert([
-                {
-                    title,
-                    amount: formattedAmount,
-                    category_id: selectedCategoryId,
-                    subcategory,
-                    created_at: createdAt,
-                    user_id: user.id,
-                    mode_of_payment: modeOfPayment,
-                    is_recurring: isRecurring === 'yes',
-                    recurring_type: isRecurring === 'yes' ? recurringType : null
-                },
-            ]);
-        }
-        if (result.error) {
-            alert('Error saving expense: ' + result.error.message);
-            return;
-        }
-        closeModal();
-
-        const { data, error } = await supabase
-            .from('expenses')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-        if (!error) setExpenses(data);
-    };
-
-    const handleDelete = async (id) => {
-        if (!window.confirm('Delete this expense?')) return;
-        await supabase.from('expenses').delete().eq('id', id);
-        setExpenses(expenses.filter(exp => exp.id !== id));
-    };
-
-    useEffect(() => {
-        const fetchExpesnes = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-            const { data, error } = await supabase
-                .from('expenses')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-            if (!error) {
-                setExpenses(data);
-                setFetchError('');
-            } else {
-                setFetchError('Failed to fetch expenses. Please try again.');
-            }
-            setLoading(false);
-        };
-        fetchExpesnes();
-    }, []);
-
     const years = Array.from(new Set(expenses.map(exp => exp.created_at.slice(0, 4)))).sort((a, b) => b - a);
     const months = Array.from(new Set(expenses.map(exp => exp.created_at.slice(0, 7)))).sort((a, b) => b.localeCompare(a));
-    const uniqueDates = Array.from(new Set(expenses.map(exp => exp.created_at.slice(0, 10))));
-
-    useEffect(() => {
-        const fetchCategories = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-            const { data: categoryData } = await supabase
-                .from('categories')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('name', { ascending: true });
-            setCategories(categoryData || []);
-        };
-        fetchCategories();
-    }, []);
-
-    useEffect(() => {
-        const fetchAllSubcategories = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-            const { data } = await supabase
-                .from('subcategories')
-                .select('name, category_id');
-            setAllSubcategories(data || []);
-        };
-        fetchAllSubcategories();
-    }, []);
-
-    const filteredSubcategories = useMemo(() => {
-        if (!category) return [];
-        const selectedCategory = categories.find(cat => cat.name === category);
-        if (selectedCategory) {
-            return allSubcategories.filter(sub => sub.category_id === selectedCategory.id);
-        }
-        return [];
-    }, [category, allSubcategories, categories]);
-
-
-    const [filterSubcategories, setFilterSubcategories] = useState([]);
-    useEffect(() => {
-        if (filterCategory) {
-            const selectedCategory = categories.find(cat => cat.name === filterCategory);
-            if (selectedCategory) {
-                const fetchSubcategories = async (categoryId) => {
-                    const { data } = await supabase
-                        .from('subcategories')
-                        .select('name')
-                        .eq('category_id', categoryId);
-                    setFilterSubcategories(data || []);
-                };
-                fetchSubcategories(selectedCategory.id);
-            }
-        } else {
-            setFilterSubcategories([]);
-            setFilterSubcategory("");
-        }
-    }, [filterCategory, categories]);
-
-    useEffect(() => {
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        setMonth(currentMonth);
-    }, []);
-
-    const isCurrentMonth = (() => {
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        return month === currentMonth;
-    })();
 
     const exportExpensesToCSV = (data, filename = 'expenses.csv') => {
         if (!data.length) return;
@@ -381,6 +271,169 @@ export default function Expenses() {
                     </div>
                 )}
             </span>
+        );
+    }
+
+    const currencySign = (currency) => {
+        return '₹'; 
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!session?.user?.email) {
+            setFetchError('Please sign in to add/edit expenses.');
+            return;
+        }
+
+        if (!title || !amount || !selectedCategoryId || !createdAt || !isRecurring) {
+            setFetchError('Please fill in all required fields.');
+            return;
+        }
+
+        if (isRecurring === 'yes' && !recurringType) {
+            setFetchError('Please select a recurring type.');
+            return;
+        }
+
+        try {
+            const expenseData = {
+                title: title.trim(),
+                amount: parseFloat(amount),
+                category_id: selectedCategoryId,
+                subcategory: subcategory.trim() || null,
+                created_at: createdAt,
+                mode_of_payment: modeOfPayment || null,
+                is_recurring: isRecurring === 'yes',
+                recurring_type: isRecurring === 'yes' ? recurringType : null,
+                user_email: session.user.email // Add user email for API
+            };
+
+            let response;
+            if (editExpense) {
+                // Update existing expense
+                response = await fetch(`/api/expenses/${editExpense.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(expenseData),
+                });
+            } else {
+                response = await fetch('/api/expenses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(expenseData),
+                });
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save expense');
+            }
+
+            await fetchExpenses();
+            
+            closeModal();
+            setFetchError('');
+            
+        } catch (error) {
+            console.error('Error saving expense:', error);
+            setFetchError(error.message || 'Failed to save expense. Please try again.');
+        }
+    };
+
+    const handleDelete = async (expenseId) => {
+        if (!session?.user?.email) {
+            setFetchError('Please sign in to delete expenses.');
+            return;
+        }
+
+        if (!confirm('Are you sure you want to delete this expense?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/expenses/${expenseId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete expense');
+            }
+
+            await fetchExpenses();
+            setFetchError('');
+            
+        } catch (error) {
+            console.error('Error deleting expense:', error);
+            setFetchError(error.message || 'Failed to delete expense. Please try again.');
+        }
+    };
+
+    useEffect(() => {
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear().toString();
+        const currentMonth = `${currentYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!year && !month) {
+            setYear(currentYear);
+            setMonth(currentMonth);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (status === 'authenticated' && session?.user?.email) {
+            const loadData = async () => {
+                setLoading(true);
+                try {
+                    await Promise.all([
+                        fetchExpenses(),
+                        fetchCategories(),
+                        fetchSubcategories()
+                    ]);
+                } catch (error) {
+                    setFetchError('Failed to load data. Please refresh the page.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            loadData();
+        } else if (status === 'unauthenticated') {
+            setLoading(false);
+            setFetchError('Please sign in to view your expenses.');
+        }
+    }, [session, status]);
+
+    if (status === 'loading') {
+        return (
+            <>
+                <BootstrapClient />
+                <div className="container-fluid">
+                    <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+                        <div className="spinner-border text-primary" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    if (status === 'unauthenticated') {
+        return (
+            <>
+                <BootstrapClient />
+                <div className="container-fluid">
+                    <div className="alert alert-warning text-center">
+                        Please sign in to view your expenses.
+                    </div>
+                </div>
+            </>
         );
     }
 
@@ -538,7 +591,6 @@ export default function Expenses() {
                                                     sortedExpenses.map((expense) => (
                                                         <tr key={expense.id}>
                                                             <td style={{ wordBreak: 'break-word' }}>{expense.created_at.slice(0, 10)}</td>
-                                                            {/* MODIFIED: Display category name by looking up from categories state using expense.category_id */}
                                                             <td style={{ wordBreak: 'break-word' }}>
                                                                 {categories.find(cat => cat.id === expense.category_id)?.name || 'N/A'}
                                                             </td>
@@ -683,17 +735,17 @@ export default function Expenses() {
                                                 </select>
                                             </div>
                                             <div className="mb-1">
-                                                <label htmlFor="recurring" className="form-label">Recurring</label>
-                                                <select
-                                                    className="form-select"
-                                                    id="recurring"
-                                                    value={isRecurring}
-                                                    onChange={e => setIsRecurring(e.target.value)}
-                                                    required
-                                                >
-                                                    <option value="yes">Yes</option>
-                                                    <option value="no">No</option>
-                                                </select>
+                                                <label htmlFor="recurring" className="form-label">Recurring</label>                                <select
+                                    className="form-select"
+                                    id="recurring"
+                                    value={isRecurring}
+                                    onChange={e => setIsRecurring(e.target.value)}
+                                    required
+                                >
+                                    <option value="">Select recurring option</option>
+                                    <option value="yes">Yes</option>
+                                    <option value="no">No</option>
+                                </select>
                                             </div>
                                             {isRecurring === 'yes' && (
                                                 <div className="mb-2">
