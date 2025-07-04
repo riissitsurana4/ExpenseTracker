@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../../../utils/supabase/client';
+import { useSession } from 'next-auth/react';
 import BootstrapClient from '../../../components/BootstrapClient';
 
 const formatDateToISO = (date) => {
@@ -33,11 +33,13 @@ export default function BudgetPage() {
   const currentYear = new Date().getFullYear();
   const currentMonthIso = formatDateToISO(new Date(currentYear, currentMonth, 1)).slice(0, 7);
 
+  const { data: session, status } = useSession();
+  const user = session?.user;
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError('');
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    if (!user) {
       setError('User not found. Please log in.');
       setLoading(false);
       return;
@@ -110,13 +112,12 @@ export default function BudgetPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentMonthIso, currentYear]);
+  }, [currentMonthIso, currentYear, user]);
 
   const handleSaveBudget = async (e, periodType) => {
     e.preventDefault();
     setError('');
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (!user) {
       setError('User not authenticated for saving budget. Please log in.');
       return;
     }
