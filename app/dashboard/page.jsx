@@ -31,7 +31,7 @@ export default function Dashboard() {
 	useEffect(() => {
 		if (!user) return;
 		const fetchCurrency = async () => {
-			const res = await fetch(`/api/user/currency?email=${user.email}`);
+			const res = await fetch('/api/user/currency');
 			const data = await res.json();
 			setUserCurrency(data?.currency || 'INR');
 		};

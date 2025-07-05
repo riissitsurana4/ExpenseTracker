@@ -32,12 +32,104 @@ const currencies = [
     "/images/currency5.png", "/images/currency6.png", "/images/currency7.png", "/images/currency8.png"
 ];
 
+const currencyMapping = {
+    "/images/currency1.png": "INR",
+    "/images/currency2.png": "USD",
+    "/images/currency3.png": "EUR",
+    "/images/currency4.png": "GBP",
+    "/images/currency5.png": "JPY",
+    "/images/currency6.png": "AUD",
+    "/images/currency7.png": "CAD",
+    "/images/currency8.png": "CNY"
+};
+
+const getCurrencySymbol = (currencyCode) => {
+    const symbols = {
+        INR: '₹',
+        USD: '$',
+        EUR: '€',
+        GBP: '£',
+        JPY: '¥',
+        AUD: 'A$',
+        CAD: 'C$',
+        CNY: '¥'
+    };
+    return symbols[currencyCode] || currencyCode;
+};
+
 export default function OnboardingPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const [page, setPage] = useState(0);
     const [selectedAvatar, setSelectedAvatar] = useState(null);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
+    const [monthlyBudget, setMonthlyBudget] = useState('');
+    const [yearlyBudget, setYearlyBudget] = useState('');
+    const [selectedCurrencyCode, setSelectedCurrencyCode] = useState('INR');
+
+    const saveBudgetData = async () => {
+        if (!session?.user?.id) return;
+
+        try {
+            await fetch('/api/user/currency', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ currency: selectedCurrencyCode })
+            });
+
+            if (monthlyBudget) {
+                const now = new Date();
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+                await fetch('/api/budgets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        amount: parseFloat(monthlyBudget),
+                        start_date: startOfMonth.toISOString(),
+                        end_date: endOfMonth.toISOString(),
+                        budget_period_type: 'monthly'
+                    })
+                });
+            }
+
+            if (yearlyBudget) {
+                const year = new Date().getFullYear();
+                const startOfYear = new Date(year, 0, 1);
+                const endOfYear = new Date(year, 11, 31);
+
+                await fetch('/api/budgets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: parseFloat(yearlyBudget),
+                        start_date: startOfYear.toISOString(),
+                        end_date: endOfYear.toISOString(),
+                        budget_period_type: 'yearly'
+                    })
+                });
+            }
+        } catch (error) {
+            console.error('Error saving budget data:', error);
+        }
+    };
+
+    const handleCurrencySelect = (currency) => {
+        setSelectedCurrency(currency);
+        setSelectedCurrencyCode(currencyMapping[currency] || 'INR');
+    };
+
+    const handleNextPage = async () => {
+        if (page === 3) {
+            await saveBudgetData();
+        }
+        setPage((prevPage) => Math.min(prevPage + 1, steps.length - 1));
+    };
 
     useEffect(() => {
         const fetchSession = async () => {
@@ -67,7 +159,6 @@ export default function OnboardingPage() {
         return <p>Loading...</p>;
     }
 
-    const nextPage = () => setPage((prevPage) => Math.min(prevPage + 1, steps.length - 1));
     const prevPage = () => setPage((prevPage) => Math.max(prevPage - 1, 0));
     const renderGrid = (items, selectedItem, onSelect) => (
         <div className="container">
@@ -138,14 +229,93 @@ export default function OnboardingPage() {
                 {page === 2 && (
                     <>
                         <p className="text-secondary fs-4">Select Your Currency</p>
-                        {renderGrid(currencies, selectedCurrency, setSelectedCurrency)}
+                        {renderGrid(currencies, selectedCurrency, handleCurrencySelect)}
                     </>
                 )}
 
                 {page === 3 && (
                     <div className="mb-4 mt-2">
-                        <p className="text-secondary fs-4">Set your Budgets</p>
+                        <p className="text-secondary fs-4 mb-4">Set your Budgets</p>
                         <div className="row d-flex justify-content-center">
+                            <div className="col-md-8">
+                                <div className="text-center mb-4">
+                                    <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                                        <span className="text-muted">Selected Currency:</span>
+                                        <span className="fw-bold text-primary fs-5">
+                                            {getCurrencySymbol(selectedCurrencyCode)} {selectedCurrencyCode}
+                                        </span>
+                                    </div>
+                                    {!selectedCurrency && (
+                                        <small className="text-warning">
+                                            Please select a currency in the previous step
+                                        </small>
+                                    )}
+                                </div>
+
+                                <div className="row">
+                                    <div className="col-md-6 mb-3">
+                                        <div className="card bg-light border-0">
+                                            <div className="card-body">
+                                                <h6 className="card-title text-primary mb-3">
+                                                    <i className="bi bi-calendar-month me-2"></i>
+                                                    Monthly Budget
+                                                </h6>
+                                                <div className="input-group">
+                                                    <span className="input-group-text">
+                                                        {getCurrencySymbol(selectedCurrencyCode)}
+                                                    </span>
+                                                    <input
+                                                        type="number"
+                                                        className="form-control"
+                                                        placeholder="Enter monthly budget"
+                                                        value={monthlyBudget}
+                                                        onChange={(e) => setMonthlyBudget(e.target.value)}
+                                                        step="0.01"
+                                                        min="0"
+                                                    />
+                                                </div>
+                                                <small className="text-muted mt-1 d-block">
+                                                    Optional: Set a limit for monthly expenses
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-md-6 mb-3">
+                                        <div className="card bg-light border-0">
+                                            <div className="card-body">
+                                                <h6 className="card-title text-success mb-3">
+                                                    <i className="bi bi-calendar-year me-2"></i>
+                                                    Yearly Budget
+                                                </h6>
+                                                <div className="input-group">
+                                                    <span className="input-group-text">
+                                                        {getCurrencySymbol(selectedCurrencyCode)}
+                                                    </span>
+                                                    <input
+                                                        type="number"
+                                                        className="form-control"
+                                                        placeholder="Enter yearly budget"
+                                                        value={yearlyBudget}
+                                                        onChange={(e) => setYearlyBudget(e.target.value)}
+                                                        step="0.01"
+                                                        min="0"
+                                                    />
+                                                </div>
+                                                <small className="text-muted mt-1 d-block">
+                                                    Optional: Set a limit for yearly expenses
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="alert alert-info mt-3">
+                                    <i className="bi bi-lightbulb me-2"></i>
+                                    <small>
+                                        <strong>Pro Tip:</strong> You can skip this step and set budgets later in the dashboard.
+                                        Budgets help you track spending and receive alerts when approaching limits.
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -173,30 +343,31 @@ export default function OnboardingPage() {
                     </div>
                 )}
 
+
                 {page !== steps.length - 1 && (
-                  <div className="d-flex justify-content-between align-items-center mt-5 px-4">
-                    {page !== 0 && (
-                        <button onClick={prevPage} className="btn btn-outline-secondary">Previous</button>
-                    )}
+                    <div className="d-flex justify-content-between align-items-center mt-5 px-4">
+                        {page !== 0 && (
+                            <button onClick={prevPage} className="btn btn-outline-secondary">Previous</button>
+                        )}
 
-                    <div className="flex-grow-1 d-flex justify-content-center">
-                        {steps.map((_, idx) => (
-                            <span
-                                key={idx}
-                                className="mx-1"
-                                style={{
-                                    width: '10px',
-                                    height: '10px',
-                                    borderRadius: '50%',
-                                    display: 'inline-block',
-                                    backgroundColor: idx === page ? '#007bff' : '#ccc'
-                                }}
-                            />
-                        ))}
+                        <div className="flex-grow-1 d-flex justify-content-center">
+                            {steps.map((_, idx) => (
+                                <span
+                                    key={idx}
+                                    className="mx-1"
+                                    style={{
+                                        width: '10px',
+                                        height: '10px',
+                                        borderRadius: '50%',
+                                        display: 'inline-block',
+                                        backgroundColor: idx === page ? '#007bff' : '#ccc'
+                                    }}
+                                />
+                            ))}
+                        </div>
+
+                        <button onClick={handleNextPage} className="btn btn-primary">Next</button>
                     </div>
-
-                    <button onClick={nextPage} className="btn btn-primary">Next</button>
-                  </div>
                 )}
             </div>
         </div>

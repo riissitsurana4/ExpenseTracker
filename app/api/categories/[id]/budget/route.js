@@ -10,11 +10,11 @@ export async function PUT(request, { params }) {
     }
 
     try {
-        const { name } = await request.json();
+        const { budget } = await request.json();
         const categoryId = params.id;
         
-        if (!name?.trim()) {
-            return Response.json({ error: "Category name is required" }, { status: 400 });
+        if (budget === undefined || budget < 0) {
+            return Response.json({ error: "Valid budget amount is required" }, { status: 400 });
         }
 
         const category = await prisma.category.update({
@@ -22,12 +22,12 @@ export async function PUT(request, { params }) {
                 id: categoryId,
                 user_id: session.user.id 
             },
-            data: { name: name.trim() },
+            data: { budget: parseFloat(budget) },
         });
 
         return Response.json(category);
     } catch (error) {
-        return Response.json({ error: 'Failed to update category' }, { status: 500 });
+        return Response.json({ error: 'Failed to update category budget' }, { status: 500 });
     }
 }
 

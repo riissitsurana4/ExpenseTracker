@@ -1,14 +1,14 @@
 ![nhbadge](https://img.shields.io/badge/made%20for%20neighborhood-bf8f73?style=for-the-badge&logo=hackclub&logoColor=ffffff)
 # 💸 Expense Tracker App
 
-A modern, responsive expense tracking application built with Next.js, Supabase, and Bootstrap. Effortlessly track your daily spending, analyze trends, and stay within your budget — all in one sleek interface.
+A modern, responsive expense tracking application built with Next.js, Prisma, and Bootstrap. Effortlessly track your daily spending, analyze trends, and stay within your budget — all in one sleek interface.
 
 🚀 **Hosted on Vercel for fast and reliable performance.**
 
 ---
 
 ## ✨ Features
-- **Secure Authentication:** Sign up & log in using Supabase
+- **Secure Authentication:** Sign up & log in using NextAuth.js
 - **Expense Management:** Add, edit, and delete expenses
 - **Powerful Filters:** Filter by date, category, and month
 - **Monthly Overview:** Visual calendar for easy navigation
@@ -22,7 +22,7 @@ A modern, responsive expense tracking application built with Next.js, Supabase, 
 
 ## 🛠️ Tech Stack
 - **Frontend:** Next.js (App Router) + JSX
-- **Backend:** Supabase (Database + Auth)
+- **Backend:** Prisma ORM + PostgreSQL (Database) + NextAuth.js (Auth)
 - **Styling:** Bootstrap 5 + SCSS Customization
 - **Deployment:** Vercel
 

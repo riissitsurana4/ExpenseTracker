@@ -13,7 +13,7 @@ export default function Profile() {
   useEffect(() => {
     if (!user) return;
     const fetchCurrency = async () => {
-      const res = await fetch(`/api/user/currency?email=${user.email}`);
+      const res = await fetch('/api/user/currency');
       const data = await res.json();
       if (data?.currency) setCurrency(data.currency);
     };
@@ -30,7 +30,7 @@ export default function Profile() {
     await fetch('/api/user/currency', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email, currency: newCurrency }),
+      body: JSON.stringify({ currency: newCurrency }),
     });
     window.location.reload();
   };

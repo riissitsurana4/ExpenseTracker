@@ -2,8 +2,6 @@
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/client": "^6.10.1",
-    "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.49.8",
     "bcryptjs": "^3.0.2",
     "bootstrap": "^5.3.6",
     "bootstrap-icons": "^1.13.1",
