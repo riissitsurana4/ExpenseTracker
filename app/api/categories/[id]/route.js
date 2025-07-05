@@ -41,7 +41,7 @@ export async function DELETE(request, { params }) {
     try {
         const categoryId = params.id;
 
-       
+        // Delete subcategories first (cascade)
         await prisma.subcategory.deleteMany({
             where: { 
                 category_id: categoryId,
@@ -49,7 +49,7 @@ export async function DELETE(request, { params }) {
             },
         });
 
-        
+        // Delete category
         await prisma.category.delete({
             where: { 
                 id: categoryId,

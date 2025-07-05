@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../utils/supabase/client';
+import { useSession } from 'next-auth/react';
 import BootstrapClient from '../../../components/BootstrapClient';
 
 export default function CategoriesPage() {
@@ -10,7 +10,6 @@ export default function CategoriesPage() {
     const [newCategoryName, setNewCategoryName] = useState("");
     const [newSubcategoryName, setNewSubcategoryName] = useState("");
     const [newSubcategoryParentId, setNewSubcategoryParentId] = useState(null);
-    const [user, setUser] = useState(null);
     const [openCategoryIds, setOpenCategoryIds] = useState([]);
     const [subcategoryTotals, setSubcategoryTotals] = useState({});
     const [categoryTotals, setCategoryTotals] = useState({});
@@ -20,168 +19,182 @@ export default function CategoriesPage() {
     const [addSubcategoryName, setAddSubcategoryName] = useState("");
     const [addSubcategoryParentId, setAddSubcategoryParentId] = useState("");
     const [editCategoryName, setEditCategoryName] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
+    const { data: session, status } = useSession();
+    
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setUser(user);
-        };
-        getUser();
-    }, []);
-
-    useEffect(() => {
-        fetchCategories();
-        fetchSubcategoryTotals();
-        fetchCategoryTotals();
-    }, [user]);
+        if (status === 'authenticated' && session?.user?.email) {
+            setLoading(true);
+            setError('');
+            Promise.all([fetchCategories(), fetchTotals()])
+                .finally(() => setLoading(false));
+        } else if (status === 'unauthenticated') {
+            setLoading(false);
+        }
+    }, [session, status]);
 
     async function fetchCategories() {
-        if (!user) return;
-        const { data, error } = await supabase
-            .from('categories')
-            .select('id, name, subcategories(id, name)')
-            .eq('user_id', user.id)
-            .order("name", { ascending: true });
-        if (!error) {
-            setCategories(data);
+        if (!session?.user?.email) return;
+        try {
+            const response = await fetch(`/api/categories?email=${encodeURIComponent(session.user.email)}`);
+            if (!response.ok) throw new Error('Failed to fetch categories');
+            const data = await response.json();
+            setCategories(Array.isArray(data) ? data : []);
+        } catch (error) {
+            setError('Failed to load categories');
         }
     }
 
     async function addCategory() {
-        if (!user || !user.id || !newCategoryName.trim()) {
-            return;
-        }
-        const response = await supabase
-            .from('categories')
-            .insert([{ name: newCategoryName, user_id: user.id }])
-            .select();
-        if (!response.error && response.data) {
-            setCategories([...categories, ...response.data]);
-            setNewCategoryName("");
+        if (!session?.user?.email || !addCategoryName.trim()) return;
+        try {
+            const response = await fetch('/api/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: addCategoryName.trim() })
+            });
+            if (!response.ok) throw new Error('Failed to add category');
+            const newCategory = await response.json();
+            setCategories([...categories, newCategory]);
+            setAddCategoryName("");
+            setShowAddCategoryModal(false);
+        } catch (error) {
+            setError('Failed to add category');
         }
     }
 
     async function addSubcategory() {
-        if (!user || !newSubcategoryName.trim() || !newSubcategoryParentId) return;
-        const { data: parentCategory } = await supabase
-            .from('categories')
-            .select('id')
-            .eq('id', newSubcategoryParentId)
-            .eq('user_id', user.id)
-            .single();
-        if (!parentCategory) {
-            return;
-        }
-        const { error } = await supabase
-            .from("subcategories")
-            .insert([{ name: newSubcategoryName.trim(), category_id: newSubcategoryParentId, user_id: user.id }]);
-        if (!error) {
-            setNewSubcategoryName("");
-            setNewSubcategoryParentId(null);
+        if (!session?.user?.email || !addSubcategoryName.trim() || !addSubcategoryParentId) return;
+        try {
+            const response = await fetch('/api/subcategories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: addSubcategoryName.trim(),
+                    category_id: addSubcategoryParentId
+                })
+            });
+            if (!response.ok) throw new Error('Failed to add subcategory');
+            setAddSubcategoryName("");
+            setAddSubcategoryParentId("");
+            setShowAddSubcategoryModal(false);
             fetchCategories();
+        } catch (error) {
+            setError('Failed to add subcategory');
         }
     }
 
-    async function updateCategory(id, newName, oldName) {
+    async function updateCategory(id, newName) {
         if (!newName.trim()) return;
-        const { error } = await supabase
-            .from('categories')
-            .update({ name: newName.trim() })
-            .eq('id', id)
-            .eq('user_id', user.id);
-        if (!error) {
-            await supabase
-                .from('expenses')
-                .update({ category: newName.trim() })
-                .eq('category', oldName)
-                .eq('user_id', user.id);
+        try {
+            const response = await fetch(`/api/categories/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName.trim() })
+            });
+            if (!response.ok) throw new Error('Failed to update category');
             setEditingCategoryId(null);
             setEditCategoryName("");
             fetchCategories();
+            fetchTotals();
+        } catch (error) {
+            setError('Failed to update category');
         }
     }
 
     async function updateSubcategory(id, newName) {
         if (!newName.trim()) return;
-        const { error } = await supabase
-            .from('subcategories')
-            .update({ name: newName.trim() })
-            .eq('id', id)
-            .eq('user_id', user.id);
-        if (!error) {
+        try {
+            const response = await fetch(`/api/subcategories/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName.trim() })
+            });
+            if (!response.ok) throw new Error('Failed to update subcategory');
             setEditingSubcategoryId(null);
+            setNewSubcategoryName("");
             fetchCategories();
+            fetchTotals();
+        } catch (error) {
+            setError('Failed to update subcategory');
         }
     }
 
     async function deleteCategory(id) {
-        if (!user) return;
-        const { error: subError } = await supabase
-            .from("subcategories")
-            .delete()
-            .eq("category_id", id)
-            .eq("user_id", user.id);
-        if (subError) {
-            return;
-        }
-        const { error } = await supabase
-            .from('categories')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', user.id);
-        if (!error) {
+        if (!session?.user?.email) return;
+        try {
+            const response = await fetch(`/api/categories/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error('Failed to delete category');
             fetchCategories();
+            fetchTotals();
+        } catch (error) {
+            setError('Failed to delete category');
         }
     }
+    
     async function deleteSubcategory(id) {
-        if (!user) return;
-        const { error } = await supabase
-            .from("subcategories")
-            .delete()
-            .eq("id", id)
-            .eq("user_id", user.id);
-        if (!error) {
+        if (!session?.user?.email) return;
+        try {
+            const response = await fetch(`/api/subcategories/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error('Failed to delete subcategory');
             fetchCategories();
+            fetchTotals();
+        } catch (error) {
+            setError('Failed to delete subcategory');
         }
     }
 
-    async function fetchSubcategoryTotals() {
-        if (!user) return;
-        const { data, error } = await supabase
-            .from('expenses')
-            .select('subcategory, amount')
-            .eq('user_id', user.id);
-        if (!error && Array.isArray(data)) {
-            const totals = {};
-            data.forEach(exp => {
-                if (!totals[exp.subcategory]) totals[exp.subcategory] = 0;
-                totals[exp.subcategory] += exp.amount;
-            });
-            setSubcategoryTotals(totals);
-        }
-    }
-
-    async function fetchCategoryTotals() {
-        if (!user) return;
-        const { data, error } = await supabase
-            .from('expenses')
-            .select('category_id, amount, categories(name)')
-            .eq('user_id', user.id);
-        if (!error && Array.isArray(data)) {
-            const totals = {};
-            data.forEach(exp => {
-                const catName = exp.categories?.name || 'Unknown';
-                if (!totals[catName]) totals[catName] = 0;
-                totals[catName] += exp.amount;
-            });
-            setCategoryTotals(totals);
+    async function fetchTotals() {
+        if (!session?.user?.email) return;
+        try {
+            const response = await fetch(`/api/expenses/totals?email=${encodeURIComponent(session.user.email)}`);
+            if (!response.ok) throw new Error('Failed to fetch totals');
+            const data = await response.json();
+            setSubcategoryTotals(data.subcategoryTotals || {});
+            setCategoryTotals(data.categoryTotals || {});
+        } catch (error) {
+            setError('Failed to load expense totals');
         }
     }
 
     return (
         <>
             <BootstrapClient />
+            {status === 'loading' && (
+                <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            )}
+            {status === 'unauthenticated' && (
+                <div className="container-fluid">
+                    <div className="alert alert-warning text-center">
+                        Please sign in to manage your categories.
+                    </div>
+                </div>
+            )}
+            {status === 'authenticated' && (
             <div className="container-fluid mt-3 text-center position-relative px-1 px-sm-3">
+                {error && (
+                    <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                        {error}
+                        <button type="button" className="btn-close" onClick={() => setError('')}></button>
+                    </div>
+                )}
+                {loading && (
+                    <div className="d-flex justify-content-center mb-3">
+                        <div className="spinner-border text-primary" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                )}
                 <div className="d-flex flex-column flex-sm-row align-items-center justify-content-between mb-2 gap-2 gap-sm-0" style={{ position: 'relative' }}>
                     <h2 className="mb-0 text-primary w-100 text-center fw-bold" style={{ fontSize: 'clamp(1.3rem, 5vw, 2.2rem)', letterSpacing: '0.5px', textShadow: '0 1px 2px #e3e3e3' }}>Categories</h2>
                     <div className="d-flex flex-row flex-wrap gap-2 mt-2 mt-sm-0 justify-content-center justify-content-sm-end w-100 w-sm-auto" style={{ zIndex: 10 }}>
@@ -262,7 +275,8 @@ export default function CategoriesPage() {
                     ))}
                 </div>
             </div>
-            {editingCategoryId && (
+            )}
+            {status === 'authenticated' && editingCategoryId && (
                 <div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 1050, display: 'block', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', minWidth: 350, maxWidth: '95vw', background: 'rgba(0,0,0,0.1)' }}>
                     <div className="modal-dialog">
                         <div className="modal-content">
@@ -283,15 +297,14 @@ export default function CategoriesPage() {
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => { setEditingCategoryId(null); setEditCategoryName(""); }}>Cancel</button>
                                 <button type="button" className="btn btn-primary" disabled={!editCategoryName.trim()} onClick={async () => {
-                                    const oldName = categories.find(cat => cat.id === editingCategoryId)?.name;
-                                    await updateCategory(editingCategoryId, editCategoryName, oldName);
+                                    await updateCategory(editingCategoryId, editCategoryName);
                             }}>Save</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-            {editingSubcategoryId && (
+            {status === 'authenticated' && editingSubcategoryId && (
                 <div className="modal fade show d-block" tabIndex='-1' style={{ zIndex: 1050, display: 'block', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', minWidth: 350, maxWidth: '95vw' }}>
                     <div className="modal-dialog">
                         <div className="modal-content">
@@ -320,10 +333,10 @@ export default function CategoriesPage() {
                     </div>
                 </div>
             )}
-            {showAddCategoryModal && (
+            {status === 'authenticated' && showAddCategoryModal && (
                 <div className="modal-backdrop fade show" style={{ zIndex: 1040, position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)' }}></div>
             )}
-            {showAddCategoryModal && (
+            {status === 'authenticated' && showAddCategoryModal && (
                 <div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 1050, display: 'block', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', minWidth: 350, maxWidth: '95vw' }}>
                     <div className="modal-dialog">
                         <div className="modal-content">
@@ -344,19 +357,17 @@ export default function CategoriesPage() {
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddCategoryModal(false)}>Cancel</button>
                                 <button className="btn btn-success" disabled={!addCategoryName.trim()} onClick={async () => {
-                                    await addCategory(addCategoryName);
-                                    setAddCategoryName("");
-                                    setShowAddCategoryModal(false);
+                                    await addCategory();
                             }}>Add</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-            {showAddSubcategoryModal && (
+            {status === 'authenticated' && showAddSubcategoryModal && (
                 <div className="modal-backdrop fade show" style={{ zIndex: 1040, position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)' }}></div>
             )}
-            {showAddSubcategoryModal && (
+            {status === 'authenticated' && showAddSubcategoryModal && (
                 <div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 1050, display: 'block', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', minWidth: 350, maxWidth: '95vw' }}>
                     <div className="modal-dialog">
                         <div className="modal-content">
@@ -387,32 +398,13 @@ export default function CategoriesPage() {
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddSubcategoryModal(false)}>Cancel</button>
                                 <button className="btn btn-primary" disabled={!addSubcategoryName.trim() || !addSubcategoryParentId} onClick={async () => {
-                                    await addSubcategory(addSubcategoryName, addSubcategoryParentId);
-                                    setAddSubcategoryName("");
-                                    setAddSubcategoryParentId("");
-                                    setShowAddSubcategoryModal(false);
+                                    await addSubcategory();
                             }}>Add</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-            {/* Add hover effect for action buttons and cards */}
-            <style jsx global>{`
-.category-action-btn:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover, .btn-outline-danger:hover {
-    background: #eaf4ff !important;
-    color: #0d6efd !important;
-    border-color: #b6d4fe !important;
-}
-.category-card:hover {
-    box-shadow: 0 4px 18px 0 rgba(13,110,253,0.10);
-    border-color: #b6d4fe;
-}
-.subcategory-card:hover {
-    box-shadow: 0 2px 8px 0 rgba(25,135,84,0.10);
-    background: #f6fff6 !important;
-}
-`}</style>
         </>
     );
 }

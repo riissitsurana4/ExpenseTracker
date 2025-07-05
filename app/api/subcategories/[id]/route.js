@@ -11,23 +11,23 @@ export async function PUT(request, { params }) {
 
     try {
         const { name } = await request.json();
-        const categoryId = params.id;
+        const subcategoryId = params.id;
         
         if (!name?.trim()) {
-            return Response.json({ error: "Category name is required" }, { status: 400 });
+            return Response.json({ error: "Subcategory name is required" }, { status: 400 });
         }
 
-        const category = await prisma.category.update({
+        const subcategory = await prisma.subcategory.update({
             where: { 
-                id: categoryId,
+                id: subcategoryId,
                 user_id: session.user.id 
             },
             data: { name: name.trim() },
         });
 
-        return Response.json(category);
+        return Response.json(subcategory);
     } catch (error) {
-        return Response.json({ error: 'Failed to update category' }, { status: 500 });
+        return Response.json({ error: 'Failed to update subcategory' }, { status: 500 });
     }
 }
 
@@ -39,26 +39,17 @@ export async function DELETE(request, { params }) {
     }
 
     try {
-        const categoryId = params.id;
+        const subcategoryId = params.id;
 
-       
-        await prisma.subcategory.deleteMany({
+        await prisma.subcategory.delete({
             where: { 
-                category_id: categoryId,
+                id: subcategoryId,
                 user_id: session.user.id 
             },
         });
 
-        
-        await prisma.category.delete({
-            where: { 
-                id: categoryId,
-                user_id: session.user.id 
-            },
-        });
-
-        return Response.json({ message: 'Category deleted successfully' });
+        return Response.json({ message: 'Subcategory deleted successfully' });
     } catch (error) {
-        return Response.json({ error: 'Failed to delete category' }, { status: 500 });
+        return Response.json({ error: 'Failed to delete subcategory' }, { status: 500 });
     }
 }
