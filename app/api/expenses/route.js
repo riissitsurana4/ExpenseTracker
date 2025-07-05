@@ -1,25 +1,34 @@
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/route";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-
 export async function GET(request) {
-    const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email");
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!email) return NextResponse.json([], { status: 400 });
-
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return NextResponse.json([], { status: 404 });
-
-    const expenses = await prisma.expense.findMany({
-        where: { user_id: user.id },
-        orderBy: { created_at: "desc" },
-    });
-    return NextResponse.json(expenses);
+    try {
+        const expenses = await prisma.expense.findMany({
+            where: { user_id: session.user.id },
+            orderBy: { created_at: "desc" },
+        });
+        return NextResponse.json(expenses);
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to fetch expenses" }, { status: 500 });
+    }
 }
 
 
 export async function POST(request) {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     try {
         const body = await request.json();
 
@@ -28,9 +37,7 @@ export async function POST(request) {
             amount, 
             category_id, 
             subcategory, 
-            created_at, 
-            user_id, 
-            user_email,
+            created_at,
             recurring_type, 
             is_recurring, 
             mode_of_payment 
@@ -43,29 +50,6 @@ export async function POST(request) {
             );
         }
 
-        let userId = user_id;
-
-        if (!userId && user_email) {
-            const user = await prisma.user.findUnique({
-                where: { email: user_email }
-            });
-            
-            if (!user) {
-                return NextResponse.json(
-                    { error: "User not found" },
-                    { status: 404 }
-                );
-            }
-            userId = user.id;
-        }
-
-        if (!userId) {
-            return NextResponse.json(
-                { error: "User ID or email is required" },
-                { status: 400 }
-            );
-        }
-
         const expense = await prisma.expense.create({
             data: {
                 title,
@@ -73,7 +57,7 @@ export async function POST(request) {
                 category_id: category_id || null,
                 subcategory: subcategory || null,
                 created_at: created_at ? new Date(created_at) : new Date(),
-                user_id: userId,
+                user_id: session.user.id,
                 recurring_type: recurring_type || null,
                 is_recurring: is_recurring || false,
                 mode_of_payment: mode_of_payment || null,

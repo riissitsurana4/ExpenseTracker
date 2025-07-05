@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import BootstrapClient from '../../../components/BootstrapClient';
 
 const formatDateToISO = (date) => {
@@ -8,6 +9,14 @@ const formatDateToISO = (date) => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const safeToNumber = (value) => {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseFloat(value) || 0;
+  if (value && typeof value.toNumber === 'function') return value.toNumber();
+  return parseFloat(value) || 0;
 };
 
 export default function BudgetPage() {
@@ -22,7 +31,6 @@ export default function BudgetPage() {
   const [categoryBudgets, setCategoryBudgets] = useState({});
   const [categories, setCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [userId, setUserId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [input, setInput] = useState({});
   const [monthlySpent, setMonthlySpent] = useState(0);
@@ -34,141 +42,191 @@ export default function BudgetPage() {
   const currentMonthIso = formatDateToISO(new Date(currentYear, currentMonth, 1)).slice(0, 7);
 
   const { data: session, status } = useSession();
-  const user = session?.user;
+  const router = useRouter();
+
+  const fetchBudgets = useCallback(async () => {
+    const response = await fetch('/api/budgets');
+    if (!response.ok) throw new Error('Failed to fetch budgets');
+    return response.json();
+  }, []);
+
+  const createBudget = useCallback(async (budgetData) => {
+    const response = await fetch('/api/budgets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(budgetData)
+    });
+    if (!response.ok) throw new Error('Failed to create budget');
+    return response.json();
+  }, []);
+
+  const updateBudget = useCallback(async (id, budgetData) => {
+    const response = await fetch(`/api/budgets/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(budgetData)
+    });
+    if (!response.ok) throw new Error('Failed to update budget');
+    return response.json();
+  }, []);
+
+  const fetchUserCurrency = useCallback(async () => {
+    const response = await fetch('/api/user/currency');
+    if (!response.ok) throw new Error('Failed to fetch currency');
+    return response.json();
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    const response = await fetch('/api/categories');
+    if (!response.ok) throw new Error('Failed to fetch categories');
+    return response.json();
+  }, []);
+
+  const fetchExpenses = useCallback(async () => {
+    const response = await fetch('/api/expenses');
+    if (!response.ok) throw new Error('Failed to fetch expenses');
+    return response.json();
+  }, []);
+
+  const updateCategoryBudget = useCallback(async (categoryId, budget) => {
+    const response = await fetch(`/api/categories/${categoryId}/budget`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ budget })
+    });
+    if (!response.ok) throw new Error('Failed to update category budget');
+    return response.json();
+  }, []);
 
   const fetchAll = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    if (!user) {
-      setError('User not found. Please log in.');
-      setLoading(false);
+    if (status === "loading") return;
+    
+    if (!session) {
+      router.push('/loginpages');
       return;
     }
-    setUserId(user.id);
+
+    setLoading(true);
+    setError('');
+    
     try {
-      const { data: userData, error: userCurrencyError } = await supabase
-        .from('users')
-        .select('currency')
-        .eq('id', user.id)
-        .single();
-      if (userCurrencyError) throw userCurrencyError;
-      setUserCurrency(userData?.currency || 'INR');
-      const { data: allBudgetsData, error: allBudgetsError } = await supabase
-        .from('budgets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('start_date', { ascending: true });
-      if (allBudgetsError) throw allBudgetsError;
-      setBudgets(allBudgetsData || []);
-      const monthBudget = (allBudgetsData || []).find(
-        (b) => b.budget_period_type === 'monthly' && formatDateToISO(new Date(b.start_date)).slice(0, 7) === currentMonthIso
+      const currencyData = await fetchUserCurrency();
+      setUserCurrency(currencyData.currency);
+
+      const allBudgetsData = await fetchBudgets();
+      setBudgets(allBudgetsData);
+
+      const monthBudget = allBudgetsData.find(
+        (b) => b.budget_period_type === 'monthly' && 
+        formatDateToISO(new Date(b.start_date)).slice(0, 7) === currentMonthIso
       );
       setCurrentMonthlyBudget(monthBudget);
-      setMonthlyInputAmount(monthBudget ? monthBudget.amount.toString() : '');
-      const yearBudget = (allBudgetsData || []).find(
-        (b) => b.budget_period_type === 'yearly' && new Date(b.start_date).getFullYear() === currentYear
+      setMonthlyInputAmount(monthBudget ? safeToNumber(monthBudget.amount).toString() : '');
+
+      const yearBudget = allBudgetsData.find(
+        (b) => b.budget_period_type === 'yearly' && 
+        new Date(b.start_date).getFullYear() === currentYear
       );
       setCurrentYearlyBudget(yearBudget);
-      setYearlyInputAmount(yearBudget ? yearBudget.amount.toString() : '');
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('id, name, budget')
-        .eq('user_id', user.id);
-      if (categoriesError) throw categoriesError;
-      setCategories(categoriesData || []);
-      const newCategoryBudgets = (categoriesData || []).reduce((acc, cat) => ({ ...acc, [cat.id]: cat.budget || 0 }), {});
+      setYearlyInputAmount(yearBudget ? safeToNumber(yearBudget.amount).toString() : '');
+
+      const categoriesData = await fetchCategories();
+      setCategories(categoriesData);
+      
+      const newCategoryBudgets = categoriesData.reduce((acc, cat) => ({ 
+        ...acc, 
+        [cat.id]: safeToNumber(cat.budget) 
+      }), {});
       setCategoryBudgets(newCategoryBudgets);
-      const { data: expensesData, error: expensesError } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', user.id);
-      if (expensesError) throw expensesError;
-      setExpenses(expensesData || []);
-      const currentMonthSpent = (expensesData || [])
+
+      const expensesData = await fetchExpenses();
+      setExpenses(expensesData);
+
+      const currentMonthSpent = expensesData
         .filter(e => e.created_at && e.created_at.slice(0, 7) === currentMonthIso)
-        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+        .reduce((sum, e) => sum + safeToNumber(e.amount), 0);
       setMonthlySpent(currentMonthSpent);
-      const currentYearSpent = (expensesData || [])
+
+      const currentYearSpent = expensesData
         .filter(e => e.created_at && e.created_at.slice(0, 4) === String(currentYear))
-        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+        .reduce((sum, e) => sum + safeToNumber(e.amount), 0);
       setYearlySpent(currentYearSpent);
-      const monthlyHistoryData = (allBudgetsData || [])
+
+      const monthlyHistoryData = allBudgetsData
         .filter(b => b.budget_period_type === 'monthly')
         .map((b) => {
           const budgetMonthIso = formatDateToISO(new Date(b.start_date)).slice(0, 7);
-          const spent = (expensesData || [])
+          const spent = expensesData
             .filter(e => e.created_at && e.created_at.slice(0, 7) === budgetMonthIso)
-            .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+            .reduce((sum, e) => sum + safeToNumber(e.amount), 0);
           return {
             month: budgetMonthIso,
-            budget: b.amount,
+            budget: safeToNumber(b.amount),
             spent,
           };
         })
         .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
       setHistory(monthlyHistoryData);
+
     } catch (err) {
       setError(`Failed to load data: ${err.message}`);
     } finally {
       setLoading(false);
     }
-  }, [currentMonthIso, currentYear, user]);
+  }, [session, status, currentMonthIso, currentYear, router, fetchUserCurrency, fetchBudgets, fetchCategories, fetchExpenses]);
 
   const handleSaveBudget = async (e, periodType) => {
     e.preventDefault();
     setError('');
-    if (!user) {
+    
+    if (!session) {
       setError('User not authenticated for saving budget. Please log in.');
       return;
     }
-    setUserId(user.id);
+
     let amountToSave;
     let existingBudget;
     let startDate;
     let endDate;
+
     if (periodType === 'monthly') {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        amountToSave = parseFloat(monthlyInputAmount);
-        existingBudget = currentMonthlyBudget;
-        startDate = formatDateToISO(startOfMonth);
-        endDate = formatDateToISO(endOfMonth);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      amountToSave = parseFloat(monthlyInputAmount);
+      existingBudget = currentMonthlyBudget;
+      startDate = formatDateToISO(startOfMonth);
+      endDate = formatDateToISO(endOfMonth);
     } else if (periodType === 'yearly') {
-        const year = new Date().getFullYear();
-        const startOfYear = new Date(year, 0, 1);
-        const endOfYear = new Date(year, 11, 31);
-        amountToSave = parseFloat(yearlyInputAmount);
-        existingBudget = currentYearlyBudget;
-        startDate = formatDateToISO(startOfYear);
-        endDate = formatDateToISO(endOfYear);
+      const year = new Date().getFullYear();
+      const startOfYear = new Date(year, 0, 1);
+      const endOfYear = new Date(year, 11, 31);
+      amountToSave = parseFloat(yearlyInputAmount);
+      existingBudget = currentYearlyBudget;
+      startDate = formatDateToISO(startOfYear);
+      endDate = formatDateToISO(endOfYear);
     } else {
-        setError('Invalid budget period type.');
-        return;
+      setError('Invalid budget period type.');
+      return;
     }
+
     if (isNaN(amountToSave) || amountToSave < 0) {
       setError('Please enter a valid positive amount.');
       return;
     }
+
     const budgetData = {
-      user_id: user.id,
       amount: amountToSave,
       start_date: startDate,
       end_date: endDate,
       budget_period_type: periodType,
     };
+
     try {
       if (existingBudget) {
-        const { error: updateError } = await supabase
-          .from('budgets')
-          .update(budgetData)
-          .eq('id', existingBudget.id);
-        if (updateError) throw updateError;
+        await updateBudget(existingBudget.id, budgetData);
       } else {
-        const { error: insertError } = await supabase
-          .from('budgets')
-          .insert([budgetData]);
-        if (insertError) throw insertError;
+        await createBudget(budgetData);
       }
       fetchAll();
     } catch (err) {
@@ -177,25 +235,23 @@ export default function BudgetPage() {
   };
 
   const totalCategoryBudget = Object.values(categoryBudgets).reduce((a, b) => a + Number(b), 0);
-  const monthlyBudgetAmount = currentMonthlyBudget ? Number(currentMonthlyBudget.amount) : 0;
-  const yearlyBudgetAmount = currentYearlyBudget ? Number(currentYearlyBudget.amount) : 0;
+  const monthlyBudgetAmount = currentMonthlyBudget ? safeToNumber(currentMonthlyBudget.amount) : 0;
+  const yearlyBudgetAmount = currentYearlyBudget ? safeToNumber(currentYearlyBudget.amount) : 0;
 
   const handleBudgetChange = async (categoryId, value) => {
     const newValue = Math.max(0, parseFloat(value) || 0);
     const newTotal = totalCategoryBudget - (categoryBudgets[categoryId] || 0) + newValue;
+    
     if (newTotal > monthlyBudgetAmount) {
       setError('Total category budgets cannot exceed the overall monthly budget.');
       return;
     }
+    
     setCategoryBudgets(prev => ({ ...prev, [categoryId]: newValue }));
     setError('');
+    
     try {
-      const { error: updateError } = await supabase
-        .from('categories')
-        .update({ budget: newValue })
-        .eq('id', categoryId)
-        .eq('user_id', userId);
-      if (updateError) throw updateError;
+      await updateCategoryBudget(categoryId, newValue);
       fetchAll();
     } catch (err) {
       setError(`Failed to update category budget: ${err.message}`);
@@ -203,7 +259,7 @@ export default function BudgetPage() {
   };
 
   useEffect(() => {
-      fetchAll();
+    fetchAll();
   }, [fetchAll]);
 
   const currencySign = (cur) => {
@@ -215,12 +271,14 @@ export default function BudgetPage() {
       default: return '';
     }
   };
+
   const percentageUsedMonthly = monthlyBudgetAmount
     ? Math.min((monthlySpent / monthlyBudgetAmount) * 100, 100)
     : 0;
   const percentageUsedYearly = yearlyBudgetAmount
     ? Math.min((yearlySpent / yearlyBudgetAmount) * 100, 100)
     : 0;
+
   if (loading) {
     return (
       <>
@@ -234,6 +292,7 @@ export default function BudgetPage() {
       </>
     );
   }
+
   return (
     <>
       <BootstrapClient />
@@ -377,7 +436,7 @@ export default function BudgetPage() {
             {categories.map(category => {
               const spent = (expenses && Array.isArray(expenses))
                 ? expenses.filter(e => e && e.category_id !== undefined && category.id !== undefined && String(e.category_id) === String(category.id) && e.created_at && e.amount !== undefined && e.created_at.slice(0, 7) === currentMonthIso)
-                    .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+                    .reduce((sum, e) => sum + safeToNumber(e.amount), 0)
                 : 0;
               const budget = categoryBudgets[category.id] || 0;
               const percent = budget ? Math.min((spent / budget) * 100, 100) : 0;
@@ -495,14 +554,16 @@ export default function BudgetPage() {
               </thead>
               <tbody>
                 {history.map((item) => {
-                  const remaining = item.budget - item.spent;
-                  const percentUsed = item.budget ? (item.spent / item.budget) * 100 : 0;
+                  const budget = safeToNumber(item.budget);
+                  const spent = safeToNumber(item.spent);
+                  const remaining = budget - spent;
+                  const percentUsed = budget ? (spent / budget) * 100 : 0;
                   const status = remaining < 0 ? 'Over Budget' : 'On Track';
                   return (
                     <tr key={item.month}>
                       <td>{new Date(`${item.month}-01`).toLocaleString('default', { month: 'long', year: 'numeric' })}</td>
-                      <td>{currencySign(userCurrency)}{item.budget.toFixed(2)}</td>
-                      <td>{currencySign(userCurrency)}{item.spent.toFixed(2)}</td>
+                      <td>{currencySign(userCurrency)}{budget.toFixed(2)}</td>
+                      <td>{currencySign(userCurrency)}{spent.toFixed(2)}</td>
                       <td>{currencySign(userCurrency)}{remaining.toFixed(2)}</td>
                       <td>{percentUsed.toFixed(2)}%</td>
                       <td className={remaining < 0 ? 'text-danger' : 'text-success'}>

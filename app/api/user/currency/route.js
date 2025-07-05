@@ -1,18 +1,22 @@
-import prisma from '@/lib/prisma';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../../auth/[...nextauth]/route";
+import prisma from "@/lib/prisma";
 
-export async function GET(req) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+export async function GET(request) {
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { email } = token;
-  const user = await prisma.user.findUnique({ where: { email } });
-
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { currency: true }
+    });
+    
+    return Response.json({ currency: user?.currency || 'INR' });
+  } catch (error) {
+    return Response.json({ error: "Failed to fetch currency" }, { status: 500 });
   }
-
-  return new Response(JSON.stringify({ currency: user.currency || 'INR' }), { status: 200 });
 }
