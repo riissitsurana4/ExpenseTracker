@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Bar, Pie, Line, Doughnut } from 'react-chartjs-2';
-import { supabase } from '../../../utils/supabase/client';
+import { useSession } from 'next-auth/react';
 import 'chart.js/auto';
 
 export default function AnalyticsPage() {
@@ -14,26 +14,52 @@ export default function AnalyticsPage() {
     const [paymentMethodData, setPaymentMethodData] = useState({});
     const [recurringData, setRecurringData] = useState({});
 
+    const { data: session, status } = useSession();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
     useEffect(() => {
         const fetchAndCalculate = async () => {
-            const { data, error } = await supabase.auth.getUser();
-            const user = data?.user;
-            if (!user) return;
-            const { data: expensesData } = await supabase
-                .from('expenses')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-            if (expensesData) calculateTotals(expensesData);
+            if (status === 'loading') return;
+            if (!session?.user) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await fetch('/api/expenses');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch expenses');
+                }
+
+                const expensesData = await response.json();
+                calculateTotals(expensesData);
+            } catch (err) {
+                console.error('Error fetching expenses:', err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
         };
+
         fetchAndCalculate();
-    }, []);
+    }, [session, status]);
+
+    const safeDecimalToNumber = (decimal) => {
+        if (typeof decimal === 'object' && decimal !== null) {
+            return parseFloat(decimal.toString());
+        }
+        return parseFloat(decimal) || 0;
+    };
 
     const calculateTotals = (expensesData) => {
         const categories = {};
         expensesData.forEach(exp => {
-            const cat = exp.category || 'Uncategorized';
-            categories[cat] = (categories[cat] || 0) + parseFloat(exp.amount);
+            const cat = exp.category?.name || 'Uncategorized';
+            categories[cat] = (categories[cat] || 0) + safeDecimalToNumber(exp.amount);
         });
         setCategoryData(categories);
 
@@ -42,22 +68,47 @@ export default function AnalyticsPage() {
             date.setDate(date.getDate() - i);
             return date.toISOString().slice(0, 10);
         }).reverse();
-        const daily = last7.map(d =>
-            expensesData.filter(exp => exp.created_at.startsWith(d))
-                .reduce((sum, e) => sum + parseFloat(e.amount), 0)
-        );
-        setDailyLabels(last7);
+        const daily = last7.map(d => {
+            return expensesData
+                .filter(exp => {
+                    if (!exp.created_at) return false;
+                    try {
+                        const expDate = new Date(exp.created_at);
+                        if (isNaN(expDate.getTime())) return false;
+                        return expDate.toISOString().slice(0, 10) === d;
+                    } catch (error) {
+                        console.warn('Invalid date format:', exp.created_at);
+                        return false;
+                    }
+                })
+                .reduce((sum, e) => sum + safeDecimalToNumber(e.amount), 0);
+        });
+        setDailyLabels(last7.map(d => new Date(d).toLocaleDateString()));
         setDailySpending(daily);
-
         const now = new Date();
         const year = now.getFullYear();
         const currentMonth = now.getMonth() + 1;
-        const months = Array.from({ length: currentMonth }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-        const monthly = months.map(m =>
-            expensesData.filter(exp => exp.created_at.startsWith(m))
-                .reduce((sum, e) => sum + parseFloat(e.amount), 0)
-        );
-        setMonthlyLabels(months);
+        const months = Array.from({ length: currentMonth }, (_, i) => {
+            const monthNum = i + 1;
+            const monthStr = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'short' });
+            return { key: `${year}-${String(monthNum).padStart(2, '0')}`, label: monthStr };
+        });
+        const monthly = months.map(m => {
+            return expensesData
+                .filter(exp => {
+                    if (!exp.created_at) return false;
+                    try {
+                        const expDate = new Date(exp.created_at);
+                        if (isNaN(expDate.getTime())) return false;
+                        return expDate.toISOString().startsWith(m.key);
+                    } catch (error) {
+                        console.warn('Invalid date format:', exp.created_at);
+                        return false;
+                    }
+                })
+                .reduce((sum, e) => sum + safeDecimalToNumber(e.amount), 0);
+        });
+        setMonthlyLabels(months.map(m => m.label));
         setMonthlySpending(monthly);
 
         const sortedCats = Object.entries(categories)
@@ -68,17 +119,20 @@ export default function AnalyticsPage() {
         const paymentMethods = {};
         expensesData.forEach(exp => {
             const mode = exp.mode_of_payment || 'Other';
-            paymentMethods[mode] = (paymentMethods[mode] || 0) + parseFloat(exp.amount);
+            paymentMethods[mode] = (paymentMethods[mode] || 0) + safeDecimalToNumber(exp.amount);
         });
         setPaymentMethodData(paymentMethods);
 
         const recurring = { Recurring: 0, 'One-Time': 0 };
         expensesData.forEach(exp => {
-            if (exp.is_recurring) recurring['Recurring'] += parseFloat(exp.amount);
-            else recurring['One-Time'] += parseFloat(exp.amount);
+            if (exp.is_recurring) recurring['Recurring'] += safeDecimalToNumber(exp.amount);
+            else recurring['One-Time'] += safeDecimalToNumber(exp.amount);
         });
         setRecurringData(recurring);
     };
+
+    if (loading) return <p className="text-center">Loading...</p>;
+    if (error) return <p className="text-center text-danger">{error}</p>;
 
     return (
         <div className="container-fluid py-4">

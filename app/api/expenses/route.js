@@ -13,6 +13,14 @@ export async function GET(request) {
     try {
         const expenses = await prisma.expense.findMany({
             where: { user_id: session.user.id },
+            include: {
+                category: {
+                    select: {
+                        id: true,
+                        name: true
+                    }
+                }
+            },
             orderBy: { created_at: "desc" },
         });
         return NextResponse.json(expenses);
