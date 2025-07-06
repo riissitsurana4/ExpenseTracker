@@ -187,13 +187,6 @@ export default function SignupPage() {
                 />
               </button>
             </div>
-            <button
-              className="btn btn-outline-secondary w-100 rounded-pill fw-semibold"
-              onClick={() => handleOAuth("email")}
-              type="button"
-            >
-              Sign up with Email Link
-            </button>
             <div className="text-center mt-3">
               <p>
                 Already have an account?{" "}
