@@ -275,7 +275,17 @@ export default function Expenses() {
     }
 
     const currencySign = (currency) => {
-        return '₹'; 
+        const symbols = {
+            INR: '₹',
+            USD: '$',
+            EUR: '€',
+            GBP: '£',
+            JPY: '¥',
+            AUD: 'A$',
+            CAD: 'C$',
+            CNY: '¥'
+        };
+        return symbols[currency] || '$';
     };
 
     const handleSubmit = async (e) => {

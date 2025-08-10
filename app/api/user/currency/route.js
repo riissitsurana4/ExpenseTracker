@@ -12,12 +12,15 @@ export async function GET(request) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { currency: true }
+      select: { currency: true, avatar: true }
     });
     
-    return Response.json({ currency: user?.currency || 'INR' });
+    return Response.json({ 
+      currency: user?.currency || 'INR',
+      avatar: user?.avatar
+    });
   } catch (error) {
-    return Response.json({ error: "Failed to fetch currency" }, { status: 500 });
+    return Response.json({ error: "Failed to fetch user data" }, { status: 500 });
   }
 }
 
@@ -29,20 +32,26 @@ export async function PUT(request) {
   }
 
   try {
-    const { currency } = await request.json();
+    const { currency, avatar } = await request.json();
     
     if (!currency) {
       return Response.json({ error: "Currency is required" }, { status: 400 });
     }
 
+    const updateData = { currency };
+    if (avatar) updateData.avatar = avatar;
+
     const user = await prisma.user.update({
       where: { id: session.user.id },
-      data: { currency },
-      select: { currency: true }
+      data: updateData,
+      select: { currency: true, avatar: true }
     });
     
-    return Response.json({ currency: user.currency });
+    return Response.json({ 
+      currency: user.currency,
+      avatar: user.avatar
+    });
   } catch (error) {
-    return Response.json({ error: "Failed to update currency" }, { status: 500 });
+    return Response.json({ error: "Failed to update user data" }, { status: 500 });
   }
 }

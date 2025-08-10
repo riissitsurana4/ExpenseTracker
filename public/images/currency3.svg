@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <title>Currency EUR</title>
+  <rect width="100" height="100" fill="#ffffff" stroke="#e5e7eb" stroke-width="2"/>
+  <!-- EUR Euro Symbol -->
+  <path d="M65 25c-4-4-10-6-16-6-12 0-21 9-21 21s9 21 21 21c6 0 12-2 16-6" stroke="#3b82f6" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <line x1="20" y1="35" x2="45" y2="35" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"/>
+  <line x1="20" y1="45" x2="45" y2="45" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"/>
+  <!-- Text Label -->
+  <text x="50" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#374151">EUR</text>
+</svg>

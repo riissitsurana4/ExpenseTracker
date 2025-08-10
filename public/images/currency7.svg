@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <title>Currency CAD</title>
+  <rect width="100" height="100" fill="#ffffff" stroke="#e5e7eb" stroke-width="2"/>
+  <!-- CAD Symbol (C with $) -->
+  <path d="M60 25c-4-3-9-5-15-5-12 0-22 10-22 22s10 22 22 22c6 0 11-2 15-5" stroke="#dc2626" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <rect x="67" y="20" width="4" height="40" fill="#dc2626"/>
+  <path d="M65 25c0-2 1-3 3-3h6c3 0 5 2 5 5s-2 5-5 5h-6c-1 0-2 1-2 2s1 2 2 2h6c3 0 5 2 5 5s-2 5-5 5h-6c-2 0-3-1-3-3" stroke="#dc2626" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Text Label -->
+  <text x="50" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#374151">CAD</text>
+</svg>

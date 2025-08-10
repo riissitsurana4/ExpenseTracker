@@ -23,24 +23,24 @@ const steps = [
 ];
 
 const avatars = [
-    "/images/avatar1.png", "/images/avatar2.png", "/images/avatar3.png", "/images/avatar4.png",
-    "/images/avatar5.png", "/images/avatar6.png", "/images/avatar7.png", "/images/avatar8.png"
+    "/images/avatar1.svg", "/images/avatar2.svg", "/images/avatar3.svg", "/images/avatar4.svg",
+    "/images/avatar5.svg", "/images/avatar6.svg", "/images/avatar7.svg", "/images/avatar8.svg"
 ];
 
 const currencies = [
-    "/images/currency1.png", "/images/currency2.png", "/images/currency3.png", "/images/currency4.png",
-    "/images/currency5.png", "/images/currency6.png", "/images/currency7.png", "/images/currency8.png"
+    "/images/currency1.svg", "/images/currency2.svg", "/images/currency3.svg", "/images/currency4.svg",
+    "/images/currency5.svg", "/images/currency6.svg", "/images/currency7.svg", "/images/currency8.svg"
 ];
 
 const currencyMapping = {
-    "/images/currency1.png": "INR",
-    "/images/currency2.png": "USD",
-    "/images/currency3.png": "EUR",
-    "/images/currency4.png": "GBP",
-    "/images/currency5.png": "JPY",
-    "/images/currency6.png": "AUD",
-    "/images/currency7.png": "CAD",
-    "/images/currency8.png": "CNY"
+    "/images/currency1.svg": "INR",
+    "/images/currency2.svg": "USD",
+    "/images/currency3.svg": "EUR",
+    "/images/currency4.svg": "GBP",
+    "/images/currency5.svg": "JPY",
+    "/images/currency6.svg": "AUD",
+    "/images/currency7.svg": "CAD",
+    "/images/currency8.svg": "CNY"
 };
 
 const getCurrencySymbol = (currencyCode) => {
@@ -76,7 +76,10 @@ export default function OnboardingPage() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ currency: selectedCurrencyCode })
+                body: JSON.stringify({ 
+                    currency: selectedCurrencyCode,
+                    avatar: selectedAvatar
+                })
             });
 
             if (monthlyBudget) {

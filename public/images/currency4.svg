@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <title>Currency GBP</title>
+  <rect width="100" height="100" fill="#ffffff" stroke="#e5e7eb" stroke-width="2"/>
+  <!-- GBP Pound Symbol -->
+  <path d="M55 20c8 0 15 7 15 15H62c0-4-3-7-7-7H40c-6 0-11 5-11 11v8h20v6H29v10h25c4 0 7 3 7 7s-3 7-7 7H29v8h-8v-8h-8v-6h8v-10h-8v-6h8v-8c0-10 8-18 18-18h15z" fill="#8b5cf6"/>
+  <!-- Text Label -->
+  <text x="50" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#374151">GBP</text>
+</svg>

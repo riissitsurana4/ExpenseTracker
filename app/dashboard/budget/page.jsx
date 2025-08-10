@@ -263,13 +263,17 @@ export default function BudgetPage() {
   }, [fetchAll]);
 
   const currencySign = (cur) => {
-    switch (cur) {
-      case 'USD': return '$';
-      case 'EUR': return '€';
-      case 'INR': return '₹';
-      case 'GBP': return '£';
-      default: return '';
-    }
+    const symbols = {
+      INR: '₹',
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      JPY: '¥',
+      AUD: 'A$',
+      CAD: 'C$',
+      CNY: '¥'
+    };
+    return symbols[cur] || '$';
   };
 
   const percentageUsedMonthly = monthlyBudgetAmount

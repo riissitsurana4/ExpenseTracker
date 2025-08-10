@@ -51,6 +51,7 @@ model User {
   password      String? 
   has_presets   Boolean?      @default(false)
   currency      String?       @default("INR")
+  avatar        String?
   budgets       Budget[]
   categories    Category[]
   expenses      Expense[]

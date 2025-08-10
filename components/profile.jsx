@@ -8,16 +8,32 @@ export default function Profile() {
   const { data: session } = useSession();
   const router = useRouter();
   const [currency, setCurrency] = useState('INR');
+  const [avatar, setAvatar] = useState('/profile.svg');
   const user = session?.user;
+
+  const getCurrencySymbol = (currencyCode) => {
+    const symbols = {
+      INR: '₹',
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      JPY: '¥',
+      AUD: 'A$',
+      CAD: 'C$',
+      CNY: '¥'
+    };
+    return symbols[currencyCode] || '$';
+  };
 
   useEffect(() => {
     if (!user) return;
-    const fetchCurrency = async () => {
+    const fetchUserData = async () => {
       const res = await fetch('/api/user/currency');
       const data = await res.json();
       if (data?.currency) setCurrency(data.currency);
+      if (data?.avatar) setAvatar(data.avatar);
     };
-    fetchCurrency();
+    fetchUserData();
   }, [user]);
 
   const handleLogout = async () => {
@@ -44,7 +60,12 @@ export default function Profile() {
         data-bs-toggle="dropdown"
         aria-expanded="false"
       >
-        <img src="/profile.png" alt="Profile" className="profile-icon" />
+        <img 
+          src={avatar} 
+          alt="Profile" 
+          className="profile-icon" 
+          style={{ width: '24px', height: '24px', borderRadius: '50%' }}
+        />
       </button>
       <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
         <li>
@@ -59,17 +80,27 @@ export default function Profile() {
         </li>
         <li>
           <div className="dropdown-item text">
-            <label htmlFor="currencySelect" className="form-label text-secondary ">Currency</label>
-            <select
-              id="currencySelect"
-              className="form-select"
-              value={currency}
-              onChange={handleCurrencyChange}
-            >
-              <option value="INR">INR</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
+            <label htmlFor="currencySelect" className="form-label text-secondary">Currency</label>
+            <div className="d-flex align-items-center gap-2">
+              <span className="fw-bold" style={{ fontSize: '18px' }}>
+                {getCurrencySymbol(currency)}
+              </span>
+              <select
+                id="currencySelect"
+                className="form-select"
+                value={currency}
+                onChange={handleCurrencyChange}
+              >
+                <option value="INR">₹ INR</option>
+                <option value="USD">$ USD</option>
+                <option value="EUR">€ EUR</option>
+                <option value="GBP">£ GBP</option>
+                <option value="JPY">¥ JPY</option>
+                <option value="AUD">A$ AUD</option>
+                <option value="CAD">C$ CAD</option>
+                <option value="CNY">¥ CNY</option>
+              </select>
+            </div>
           </div>
         </li>
       </ul>

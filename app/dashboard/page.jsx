@@ -39,12 +39,17 @@ export default function Dashboard() {
 	}, [user]);
 
 	const currencySign = (cur) => {
-		switch (cur) {
-			case 'USD': return '$';
-			case 'EUR': return '€';
-			case 'INR': return '₹';
-			default: return '';
-		}
+		const symbols = {
+			INR: '₹',
+			USD: '$',
+			EUR: '€',
+			GBP: '£',
+			JPY: '¥',
+			AUD: 'A$',
+			CAD: 'C$',
+			CNY: '¥'
+		};
+		return symbols[cur] || '$';
 	};
 
 	useEffect(() => {
