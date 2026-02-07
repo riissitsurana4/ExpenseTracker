@@ -10,7 +10,7 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.511.0",
-    "next": "^15.3.2",
+    "next": "15.3.8",
     "next-auth": "^4.24.11",
     "papaparse": "^5.5.3",
     "prisma": "^6.10.1",
